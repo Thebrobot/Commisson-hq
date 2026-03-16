@@ -1,7 +1,7 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
 import { normalizeWebhookPayload } from "../src/lib/commission/webhook";
 import type { GhlWebhookPayload } from "../src/types/webhook";
-import { supabaseAdmin } from "../src/lib/supabase-admin";
+import { getSupabaseAdmin } from "../src/lib/supabase-admin";
 
 /**
  * Webhook endpoint for GoHighLevel.
@@ -35,6 +35,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
 
     const normalized = normalizeWebhookPayload(payload);
+
+    const supabaseAdmin = getSupabaseAdmin();
 
     // Look up rep by email (case-insensitive)
     const { data: rep, error: repError } = await supabaseAdmin
@@ -95,7 +97,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       ghlContactId: normalized.ghlContactId,
     });
   } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
     console.error("[webhook] Error:", err);
-    return res.status(500).json({ error: "Internal server error" });
+    return res.status(500).json({ error: "Webhook failed", details: msg });
   }
 }
