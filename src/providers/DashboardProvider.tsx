@@ -7,7 +7,7 @@ import {
   useState,
   type ReactNode,
 } from "react";
-import { getRepOverrides, setRepOverride } from "@/lib/repOverrides";
+import { useAuth } from "@/providers/AuthProvider";
 import {
   aggregateRepDeals,
   aggregateTeam,
@@ -23,15 +23,7 @@ const STORAGE_KEY = "commission-current-user";
 
 interface RepWithTenant extends Rep {
   tenantId?: string;
-}
-
-function mergeRepWithOverrides(rep: Rep, overrides: Record<string, { name?: string; email?: string; avatar?: string }>): Rep {
-  const override = overrides[rep.id];
-  if (!override || Object.keys(override).length === 0) return rep;
-  return {
-    ...rep,
-    ...override,
-  };
+  authUserId?: string | null;
 }
 
 interface DashboardContextValue {
@@ -44,7 +36,8 @@ interface DashboardContextValue {
   markDealPaid: (dealId: string) => Promise<void>;
   cancelDeal: (dealId: string) => Promise<void>;
   updateDeal: (dealId: string, updates: Partial<Deal>) => Promise<void>;
-  updateRepProfile: (repId: string, updates: { name?: string; email?: string; avatar?: string }) => void;
+  updateRepProfile: (repId: string, updates: { name?: string; email?: string; avatar?: string; role?: "rep" | "manager" }) => Promise<void>;
+  myRepId: string | null;
   team: ReturnType<typeof aggregateTeam>;
   selectedSummary: ReturnType<typeof aggregateRepDeals> | null;
   leaderboard: ReturnType<typeof getLeaderboard>;
@@ -57,14 +50,21 @@ interface DashboardContextValue {
 const DashboardContext = createContext<DashboardContextValue | null>(null);
 
 export function DashboardProvider({ children }: { children: ReactNode }) {
+  const { user } = useAuth();
   const [selectedRepId, setSelectedRepIdState] = useState<ViewScope>("all");
   const [repsRaw, setRepsRaw] = useState<RepWithTenant[]>([]);
   const [deals, setDeals] = useState<Deal[]>([]);
-  const [repOverrides, setRepOverridesState] = useState(() => getRepOverrides());
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   const tenantId = repsRaw[0]?.tenantId ?? null;
+  const myRepId = useMemo(() => {
+    const byAuth = repsRaw.find((r) => (r as RepWithTenant).authUserId === user?.id)?.id;
+    if (byAuth) return byAuth;
+    // Fallback: match by email (for manually-created rep rows without auth_user_id)
+    const byEmail = repsRaw.find((r) => r.email === user?.email)?.id;
+    return byEmail ?? null;
+  }, [repsRaw, user?.id, user?.email]);
 
   // Fetch reps and deals from Supabase
   useEffect(() => {
@@ -75,7 +75,7 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
       setError(null);
       try {
         const [repsRes, dealsRes] = await Promise.all([
-          supabase.from("reps").select("id, tenant_id, name, email, avatar, role"),
+          supabase.from("reps").select("id, tenant_id, name, email, avatar, role, auth_user_id"),
           supabase.from("deals").select("*").order("close_date", { ascending: false }),
         ]);
 
@@ -87,6 +87,7 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
         const repsWithTenant: RepWithTenant[] = (repsRes.data ?? []).map((r) => ({
           ...mapRepRow(r),
           tenantId: r.tenant_id,
+          authUserId: r.auth_user_id ?? null,
         }));
         setRepsRaw(repsWithTenant);
         setDeals((dealsRes.data ?? []).map(mapDealRow));
@@ -228,15 +229,38 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
     );
   }, [tenantId]);
 
-  const updateRepProfile = useCallback((repId: string, updates: { name?: string; email?: string; avatar?: string }) => {
-    setRepOverride(repId, updates);
-    setRepOverridesState(getRepOverrides());
+  const updateRepProfile = useCallback(async (repId: string, updates: { name?: string; email?: string; avatar?: string; role?: "rep" | "manager" }) => {
+    const row: Record<string, unknown> = {};
+    if (updates.name != null && updates.name.trim()) row.name = updates.name.trim();
+    if (updates.email != null && updates.email.trim()) row.email = updates.email.trim();
+    if (updates.avatar !== undefined) row.avatar = updates.avatar?.trim() || null;
+    if (updates.role === "rep" || updates.role === "manager") row.role = updates.role;
+
+    if (Object.keys(row).length === 0) return;
+
+    const { error: updateError } = await supabase.from("reps").update(row).eq("id", repId);
+
+    if (updateError) {
+      console.error("[updateRepProfile]", updateError);
+      throw updateError;
+    }
+
+    setRepsRaw((prev) =>
+      prev.map((r) =>
+        r.id === repId
+          ? {
+              ...r,
+              ...(row.name != null && { name: row.name as string }),
+              ...(row.email != null && { email: row.email as string }),
+              ...(row.avatar !== undefined && { avatar: (row.avatar as string | null) ?? "" }),
+              ...(row.role != null && { role: row.role as "rep" | "manager" }),
+            }
+          : r,
+      ),
+    );
   }, []);
 
-  const reps = useMemo(
-    () => repsRaw.map((r) => mergeRepWithOverrides(r, repOverrides)),
-    [repsRaw, repOverrides],
-  );
+  const reps = useMemo(() => repsRaw, [repsRaw]);
 
   const team = useMemo(() => aggregateTeam(reps, deals), [reps, deals]);
   const selectedRep = useMemo(
@@ -271,6 +295,7 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
       cancelDeal,
       updateDeal,
       updateRepProfile,
+      myRepId,
       team,
       selectedSummary,
       leaderboard,
@@ -288,6 +313,7 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
       leaderboard,
       loading,
       markDealPaid,
+      myRepId,
       reps,
       selectedRep,
       selectedRepId,

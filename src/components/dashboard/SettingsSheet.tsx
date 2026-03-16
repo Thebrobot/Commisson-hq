@@ -28,14 +28,19 @@ interface SettingsSheetProps {
 }
 
 const SettingsSheet = ({ open, onOpenChange }: SettingsSheetProps) => {
-  const { reps, selectedRepId, updateRepProfile } = useDashboard();
-  const { signOut } = useAuth();
+  const { reps, selectedRepId, updateRepProfile, myRepId } = useDashboard();
+  const { signOut, user } = useAuth();
   const [editingRepId, setEditingRepId] = useState<string>("");
   const rep = reps.find((r) => r.id === editingRepId);
+  const myRep = reps.find((r) => r.id === myRepId);
+  const isEditingSelf = editingRepId === myRepId || (myRepId === null && rep?.email === user?.email);
+  const isManager = myRep?.role === "manager";
+  const canChangeRole = isManager && editingRepId && editingRepId !== myRepId;
 
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [avatar, setAvatar] = useState("");
+  const [role, setRole] = useState<"rep" | "manager">("rep");
 
   // When opening or when scope changes: if viewing a specific rep, edit that rep; otherwise default to first
   useEffect(() => {
@@ -51,6 +56,7 @@ const SettingsSheet = ({ open, onOpenChange }: SettingsSheetProps) => {
     if (rep) {
       setName(rep.name);
       setEmail(rep.email);
+      setRole(rep.role);
       const isUrl =
         rep.avatar &&
         (rep.avatar.startsWith("http") || rep.avatar.startsWith("data:"));
@@ -58,14 +64,26 @@ const SettingsSheet = ({ open, onOpenChange }: SettingsSheetProps) => {
     }
   }, [rep, open]);
 
-  const handleSave = () => {
-    if (editingRepId) {
-      updateRepProfile(editingRepId, {
+  const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
+
+  const handleSave = async () => {
+    if (!editingRepId) return;
+    setSaveError(null);
+    setSaving(true);
+    try {
+      const updates: { name?: string; email?: string; avatar?: string; role?: "rep" | "manager" } = {
         name: name.trim(),
         email: email.trim(),
         avatar: avatar.trim(),
-      });
+      };
+      if (canChangeRole) updates.role = role;
+      await updateRepProfile(editingRepId, updates);
       onOpenChange(false);
+    } catch (err) {
+      setSaveError(err instanceof Error ? err.message : "Failed to save");
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -74,7 +92,8 @@ const SettingsSheet = ({ open, onOpenChange }: SettingsSheetProps) => {
   const hasChanges =
     name.trim() !== rep.name ||
     email.trim() !== rep.email ||
-    avatar.trim() !== rep.avatar;
+    avatar.trim() !== rep.avatar ||
+    (canChangeRole && role !== rep.role);
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
@@ -83,7 +102,9 @@ const SettingsSheet = ({ open, onOpenChange }: SettingsSheetProps) => {
           <SheetTitle>Profile settings</SheetTitle>
           <SheetDescription>
             {selectedRepId === "all"
-              ? "Select a team member to edit their profile."
+              ? isManager
+                ? "Select a team member to edit their profile. Choose someone else to promote them to manager."
+                : "Select a team member to edit their profile."
               : "Editing profile for the currently selected view. Changes appear across the dashboard."}
           </SheetDescription>
         </SheetHeader>
@@ -149,6 +170,43 @@ const SettingsSheet = ({ open, onOpenChange }: SettingsSheetProps) => {
               onChange={(e) => setEmail(e.target.value)}
             />
           </div>
+
+          <div className="space-y-2">
+            <Label>Role</Label>
+            {canChangeRole ? (
+              <>
+                <Select value={role} onValueChange={(v) => setRole(v as "rep" | "manager")}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="rep">Rep</SelectItem>
+                    <SelectItem value="manager">Manager</SelectItem>
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-muted-foreground">
+                  Managers can see all team deals and edit any rep&apos;s profile.
+                </p>
+              </>
+            ) : (
+              <>
+                <div className="rounded-md border bg-muted/50 px-3 py-2 text-sm capitalize">
+                  {rep.role}
+                </div>
+                {isEditingSelf && rep.role === "manager" && (
+                  <p className="text-xs text-muted-foreground">
+                    The system recognizes your login as a manager.
+                  </p>
+                )}
+              </>
+            )}
+          </div>
+
+          {saveError && (
+            <p className="text-sm text-destructive" role="alert">
+              {saveError}
+            </p>
+          )}
         </div>
 
         <SheetFooter className="mt-8 flex-col gap-2 sm:flex-row">
@@ -167,8 +225,8 @@ const SettingsSheet = ({ open, onOpenChange }: SettingsSheetProps) => {
             <Button variant="outline" onClick={() => onOpenChange(false)}>
               Cancel
             </Button>
-            <Button onClick={handleSave} disabled={!hasChanges}>
-              Save changes
+            <Button onClick={handleSave} disabled={!hasChanges || saving}>
+              {saving ? "Saving…" : "Save changes"}
             </Button>
           </div>
         </SheetFooter>
