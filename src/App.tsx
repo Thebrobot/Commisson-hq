@@ -35,20 +35,43 @@ function ProtectedRoutes() {
   useEffect(() => {
     if (!user) return;
     let cancelled = false;
-    supabase.auth.getSession().then(({ data: { session } }) => {
+    const maxRetries = 3;
+    const retryDelayMs = 1000;
+
+    async function ensureRepWithRetry(session: { access_token: string }) {
+      for (let attempt = 1; attempt <= maxRetries; attempt++) {
+        try {
+          const res = await fetch("/api/signup-complete", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${session.access_token}`,
+            },
+          });
+          if (res.ok) return true;
+          if (attempt < maxRetries) {
+            await new Promise((r) => setTimeout(r, retryDelayMs * attempt));
+          } else {
+            console.error("[signup-complete] Failed after retries:", res.status, await res.text());
+          }
+        } catch (err) {
+          if (attempt < maxRetries) {
+            await new Promise((r) => setTimeout(r, retryDelayMs * attempt));
+          } else {
+            console.error("[signup-complete] Network error:", err);
+          }
+        }
+      }
+      return false;
+    }
+
+    supabase.auth.getSession().then(async ({ data: { session } }) => {
       if (cancelled || !session) {
         setRepReady(true);
         return;
       }
-      fetch("/api/signup-complete", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${session.access_token}`,
-        },
-      })
-        .then(() => { if (!cancelled) setRepReady(true); })
-        .catch(() => { if (!cancelled) setRepReady(true); });
+      await ensureRepWithRetry(session);
+      if (!cancelled) setRepReady(true);
     });
     return () => { cancelled = true; };
   }, [user]);

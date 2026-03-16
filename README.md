@@ -14,7 +14,9 @@ npm install
 npm run dev
 ```
 
-The app runs at `http://localhost:8080`.
+The app runs at `http://localhost:8081`.
+
+**New user signup:** The signup flow creates a rep row via `/api/signup-complete`. For this to work locally, run `npm run dev:full` (uses `vercel dev`), which serves both the app and the API. With plain `npm run dev`, the API returns 404 locally—signup works in production (Vercel).
 
 ## Tech stack
 

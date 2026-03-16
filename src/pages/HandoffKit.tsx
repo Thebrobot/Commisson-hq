@@ -105,23 +105,47 @@ Rep: ${rep?.name ?? ""}`;
   }, [deal, rep]);
 
   const handleCopyDiscordMessage = async () => {
+    const fallbackCopy = () => {
+      const ta = document.createElement("textarea");
+      ta.value = discordMessage;
+      ta.setAttribute("readonly", "");
+      ta.style.position = "fixed";
+      ta.style.top = "0";
+      ta.style.left = "0";
+      ta.style.width = "2em";
+      ta.style.height = "2em";
+      ta.style.padding = "0";
+      ta.style.border = "none";
+      ta.style.outline = "none";
+      ta.style.boxShadow = "none";
+      ta.style.background = "transparent";
+      ta.style.opacity = "0";
+      ta.style.pointerEvents = "none";
+      document.body.appendChild(ta);
+      ta.focus();
+      ta.select();
+      const ok = document.execCommand("copy");
+      document.body.removeChild(ta);
+      return ok;
+    };
+
     try {
       if (navigator.clipboard?.writeText) {
         await navigator.clipboard.writeText(discordMessage);
         toast.success("Copied to clipboard");
       } else {
-        const ta = document.createElement("textarea");
-        ta.value = discordMessage;
-        ta.style.position = "fixed";
-        ta.style.left = "-9999px";
-        document.body.appendChild(ta);
-        ta.select();
-        document.execCommand("copy");
-        document.body.removeChild(ta);
-        toast.success("Copied to clipboard");
+        if (fallbackCopy()) {
+          toast.success("Copied to clipboard");
+        } else {
+          throw new Error("Copy failed");
+        }
       }
-    } catch (err) {
-      toast.error("Copy failed – try selecting the text above manually");
+    } catch {
+      if (fallbackCopy()) {
+        toast.success("Copied to clipboard");
+      } else {
+        toast.error("Copy failed – try selecting the text above manually");
+      }
     }
   };
 
@@ -221,7 +245,7 @@ Rep: ${rep?.name ?? ""}`;
       initial={reduceMotion ? false : { opacity: 0, y: 16 }}
       animate={reduceMotion ? undefined : { opacity: 1, y: 0 }}
       transition={{ duration: 0.4 }}
-      className="space-y-6"
+      className="space-y-6 pb-24"
     >
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-4">

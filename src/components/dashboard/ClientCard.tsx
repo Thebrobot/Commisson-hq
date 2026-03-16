@@ -46,8 +46,10 @@ export default function ClientCard({ item, onClick, onHandoffClick, onPaidChange
           onClick();
         }
       }}
-      className={`rounded-xl border border-border bg-card p-4 transition-colors hover:border-primary/30 hover:bg-muted/30 cursor-pointer ${
-        item.deal.paidOut ? "bg-green-500/5" : ""
+      className={`rounded-xl border border-border bg-card p-4 transition-colors cursor-pointer ${
+        item.deal.paidOut
+          ? "bg-green-500/5 hover:bg-green-500/5 hover:border-border"
+          : "hover:border-primary/30 hover:bg-muted/30"
       }`}
     >
       <div className="flex items-start gap-3">

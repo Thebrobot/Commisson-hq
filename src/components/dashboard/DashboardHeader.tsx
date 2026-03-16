@@ -49,7 +49,7 @@ const DashboardHeader = () => {
     <motion.header
       initial={reduceMotion ? false : { opacity: 0, y: -10 }}
       animate={reduceMotion ? undefined : { opacity: 1, y: 0 }}
-      className="flex flex-col gap-2 py-2 pb-1 sm:flex-row sm:items-center sm:gap-2 sm:py-3 md:gap-3 md:py-4 lg:gap-4 lg:py-5"
+      className="flex flex-col gap-2 py-1.5 pb-0.5 sm:flex-row sm:items-center sm:gap-2 sm:py-2 md:gap-3 md:py-2 lg:gap-3 lg:py-2"
     >
       {/* Mobile: Brand + hamburger + utility icons, then Team dropdown */}
       <div className="flex flex-1 flex-col gap-2 sm:hidden">
@@ -96,7 +96,7 @@ const DashboardHeader = () => {
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-[17rem] rounded-xl border-border bg-card/95 p-2 text-foreground backdrop-blur-xl">
             <DropdownMenuLabel className="px-2 pb-1 pt-0 text-xs uppercase tracking-[0.2em] text-muted-foreground">View Scope</DropdownMenuLabel>
-            <DropdownMenuSeparator className="mx-0 bg-border" />
+            <DropdownMenuSeparator className="md:col-span-2 mx-0 bg-border" />
             <DropdownMenuRadioGroup value={selectedRepId} onValueChange={setSelectedRepId}>
               <DropdownMenuRadioItem value="all" className="mt-1 rounded-lg px-3 py-2.5 focus:bg-secondary/70 focus:text-foreground">
                 <div className="flex items-center gap-3">
@@ -156,8 +156,8 @@ const DashboardHeader = () => {
                   New Order
                 </Button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-[20rem] rounded-xl border-border bg-card/95 p-2 text-foreground backdrop-blur-xl">
-                <DropdownMenuItem className="flex cursor-pointer items-start gap-3 rounded-lg px-3 py-2.5 focus:bg-secondary/70 focus:text-foreground" onSelect={() => navigate("/clients", { state: { openNewClient: true } })}>
+              <DropdownMenuContent align="end" className="w-[20rem] rounded-xl border-border bg-card/95 p-2 text-foreground backdrop-blur-xl md:w-auto md:min-w-[36rem] md:grid md:grid-cols-2 md:gap-x-6 md:p-4">
+                <DropdownMenuItem className="col-span-2 flex cursor-pointer items-start gap-3 rounded-lg px-3 py-2.5 focus:bg-secondary/70 focus:text-foreground md:col-span-2" onSelect={() => navigate("/clients", { state: { openNewClient: true } })}>
                   <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary text-primary-foreground">
                     <UserPlus className="h-4 w-4" />
                   </div>
@@ -166,8 +166,8 @@ const DashboardHeader = () => {
                     <p className="mt-0.5 text-xs text-muted-foreground">Create a new client and add them to your active deals.</p>
                   </div>
                 </DropdownMenuItem>
-                <DropdownMenuSeparator className="mx-0 bg-border" />
-                <DropdownMenuLabel className="px-2 pb-1 pt-0 text-xs uppercase tracking-[0.2em] text-muted-foreground">Tools</DropdownMenuLabel>
+                <DropdownMenuSeparator className="col-span-2 mx-0 bg-border md:col-span-2" />
+                <DropdownMenuLabel className="col-span-2 px-2 pb-1 pt-0 text-xs uppercase tracking-[0.2em] text-muted-foreground md:col-span-2">Tools</DropdownMenuLabel>
                 {handoffToolItems.map((tool) => {
                   const Icon = tool.icon;
                   return (
@@ -190,8 +190,8 @@ const DashboardHeader = () => {
                     </DropdownMenuItem>
                   );
                 })}
-                <DropdownMenuSeparator className="mx-0 bg-border" />
-                <DropdownMenuLabel className="px-2 pb-1 pt-0 text-xs uppercase tracking-[0.2em] text-muted-foreground">Order links</DropdownMenuLabel>
+                <DropdownMenuSeparator className="col-span-2 mx-0 bg-border md:col-span-2" />
+                <DropdownMenuLabel className="col-span-2 px-2 pb-1 pt-0 text-xs uppercase tracking-[0.2em] text-muted-foreground md:col-span-2">Order links</DropdownMenuLabel>
                 {handoffProductColumns.flatMap((col) => col.products).map((product) => {
                   const Icon = product.icon;
                   return (
@@ -211,8 +211,8 @@ const DashboardHeader = () => {
                     </DropdownMenuItem>
                   );
                 })}
-                <DropdownMenuSeparator className="mx-0 bg-border" />
-                <DropdownMenuLabel className="px-2 pb-1 pt-0 text-xs uppercase tracking-[0.2em] text-muted-foreground">Handoff Hub</DropdownMenuLabel>
+                <DropdownMenuSeparator className="col-span-2 mx-0 bg-border md:col-span-2" />
+                <DropdownMenuLabel className="col-span-2 px-2 pb-1 pt-0 text-xs uppercase tracking-[0.2em] text-muted-foreground md:col-span-2">Handoff Hub</DropdownMenuLabel>
                 {handoffTools.map((tool) => {
                   const Icon = tool.icon;
                   const isChecklist = tool.title === "Onboard Checklist";
@@ -228,8 +228,8 @@ const DashboardHeader = () => {
                     </DropdownMenuItem>
                   );
                 })}
-                <DropdownMenuSeparator className="mx-0 bg-border" />
-                <DropdownMenuItem className="flex cursor-pointer items-center gap-2 rounded-lg px-3 py-2 text-xs text-muted-foreground focus:bg-secondary/70 focus:text-foreground" onSelect={() => navigate("/handoff")}>
+                <DropdownMenuSeparator className="col-span-2 mx-0 bg-border md:col-span-2" />
+                <DropdownMenuItem className="col-span-2 flex cursor-pointer items-center gap-2 rounded-lg px-3 py-2 text-xs text-muted-foreground focus:bg-secondary/70 focus:text-foreground md:col-span-2" onSelect={() => navigate("/handoff")}>
                   View All
                 </DropdownMenuItem>
               </DropdownMenuContent>
@@ -281,7 +281,7 @@ const DashboardHeader = () => {
               <DropdownMenuLabel className="px-2 pb-1 pt-0 text-xs uppercase tracking-[0.2em] text-muted-foreground">
                 View Scope
               </DropdownMenuLabel>
-              <DropdownMenuSeparator className="mx-0 bg-border" />
+              <DropdownMenuSeparator className="md:col-span-2 mx-0 bg-border" />
               <DropdownMenuRadioGroup value={selectedRepId} onValueChange={setSelectedRepId}>
                 <DropdownMenuRadioItem
                   value="all"

@@ -47,7 +47,7 @@ const Clients = () => {
   const reduceMotion = useReducedMotion();
   const location = useLocation();
   const navigate = useNavigate();
-  const { deals, reps, selectedRepId, setSelectedRepId, updateDeal, addDeal, cancelDeal, loading } = useDashboard();
+  const { deals, reps, selectedRepId, setSelectedRepId, team, selectedSummary, selectedRep, updateDeal, addDeal, cancelDeal, loading } = useDashboard();
   const [selectedItem, setSelectedItem] = useState<DealFeedItem | null>(null);
   const [availabilityFilter, setAvailabilityFilter] = useState<AvailabilityFilter>("all");
 
@@ -102,17 +102,6 @@ const Clients = () => {
     });
   }, [clientItems, availabilityFilter]);
 
-  const readySummary = useMemo(() => {
-    const ready = clientItems.filter(
-      (item) =>
-        item.deal.status === "active" &&
-        !item.deal.paidOut &&
-        item.summary.availableNow,
-    );
-    const total = ready.reduce((sum, item) => sum + item.summary.totalCommission, 0);
-    return { count: ready.length, total };
-  }, [clientItems]);
-
   const pendingHandoffCount = useMemo(() => {
     const scopedDeals =
       selectedRepId === "all"
@@ -144,16 +133,40 @@ const Clients = () => {
             </p>
           </div>
         </div>
-        {readySummary.count > 0 && (
+        <div className="flex flex-wrap items-center gap-3">
+          {/* Commission summary: team total or rep-specific */}
           <div className="rounded-lg border border-primary/20 bg-primary/5 px-4 py-2">
-            <p className="text-sm font-semibold text-primary">
-              {readySummary.count} deal{readySummary.count !== 1 ? "s" : ""} ready to pay
-            </p>
-            <p className="font-mono-tabular text-lg font-bold text-foreground">
-              {currency.format(readySummary.total)}
-            </p>
+            {selectedRepId === "all" ? (
+              <>
+                <p className="text-sm font-semibold text-primary">
+                  Team commission this cycle
+                </p>
+                <p className="font-mono-tabular text-lg font-bold text-foreground">
+                  {currency.format(team.totalAvailableCommission)}
+                </p>
+                {team.totalPendingCommission > 0 && (
+                  <p className="text-xs text-muted-foreground mt-0.5">
+                    +{currency.format(team.totalPendingCommission)} pending
+                  </p>
+                )}
+              </>
+            ) : selectedSummary ? (
+              <>
+                <p className="text-sm font-semibold text-primary">
+                  Commission for {selectedRep?.name ?? "rep"}
+                </p>
+                <p className="font-mono-tabular text-lg font-bold text-foreground">
+                  {currency.format(selectedSummary.availableCommission)}
+                </p>
+                {selectedSummary.pendingCommission > 0 && (
+                  <p className="text-xs text-muted-foreground mt-0.5">
+                    +{currency.format(selectedSummary.pendingCommission)} pending
+                  </p>
+                )}
+              </>
+            ) : null}
           </div>
-        )}
+        </div>
       </div>
 
       {pendingHandoffCount > 0 && (
@@ -263,8 +276,10 @@ const Clients = () => {
               return (
                 <TableRow
                   key={item.deal.id}
-                  className={`cursor-pointer transition-colors hover:bg-muted/50 ${
-                    item.deal.paidOut ? "bg-green-500/10" : ""
+                  className={`cursor-pointer transition-colors ${
+                    item.deal.paidOut
+                      ? "bg-green-500/10 hover:bg-green-500/10"
+                      : "hover:bg-muted/50"
                   }`}
                   onClick={() => setSelectedItem(item)}
                   onKeyDown={(e) => {

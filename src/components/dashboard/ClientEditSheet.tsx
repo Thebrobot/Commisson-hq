@@ -270,11 +270,11 @@ const ClientEditSheet = ({
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div className="space-y-2">
               <Label>Rep</Label>
-              <Select value={repId} onValueChange={setRepId}>
+              <Select value={repId || undefined} onValueChange={setRepId}>
                 <SelectTrigger>
                   <SelectValue placeholder="Select rep" />
                 </SelectTrigger>
-                <SelectContent>
+                <SelectContent modal={false} position="popper" className="z-[100]">
                   {reps.map((r) => (
                     <SelectItem key={r.id} value={r.id}>
                       {r.name}
@@ -562,6 +562,11 @@ const ClientEditSheet = ({
                   {currency.format(summary.totalCommission)}
                 </span>
               </div>
+              {repId && !isCancelled && (
+                <p className="text-xs font-medium text-primary">
+                  {currency.format(summary.totalCommission)} will be paid to {reps.find((r) => r.id === repId)?.name ?? "—"}
+                </p>
+              )}
               <p className="text-xs text-muted-foreground">
                 Payout: {longDateFormat.format(summary.payoutDate)}
               </p>

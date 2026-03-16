@@ -67,44 +67,77 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
   }, [repsRaw, user?.id, user?.email]);
 
   // Fetch reps and deals from Supabase
+  const loadData = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const [repsRes, dealsRes] = await Promise.all([
+        supabase.from("reps").select("id, tenant_id, name, email, avatar, role, auth_user_id"),
+        supabase.from("deals").select("*").order("close_date", { ascending: false }),
+      ]);
+
+      if (repsRes.error) throw repsRes.error;
+      if (dealsRes.error) throw dealsRes.error;
+
+      const repsWithTenant: RepWithTenant[] = (repsRes.data ?? []).map((r) => ({
+        ...mapRepRow(r),
+        tenantId: r.tenant_id,
+        authUserId: r.auth_user_id ?? null,
+      }));
+      setRepsRaw(repsWithTenant);
+      setDeals((dealsRes.data ?? []).map(mapDealRow));
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to load data");
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
   useEffect(() => {
-    let mounted = true;
+    loadData();
+  }, [loadData]);
 
-    async function load() {
-      setLoading(true);
-      setError(null);
-      try {
-        const [repsRes, dealsRes] = await Promise.all([
-          supabase.from("reps").select("id, tenant_id, name, email, avatar, role, auth_user_id"),
-          supabase.from("deals").select("*").order("close_date", { ascending: false }),
-        ]);
+  // Recovery: if user is logged in but has no rep row, retry signup-complete and refetch
+  useEffect(() => {
+    if (!user || loading || myRepId != null || repsRaw.length === 0) return;
+    const hasRepForUser = repsRaw.some(
+      (r) => (r as RepWithTenant).authUserId === user.id || r.email === user.email,
+    );
+    if (hasRepForUser) return;
 
-        if (!mounted) return;
+    let cancelled = false;
+    const maxRetries = 3;
+    const retryDelayMs = 800;
 
-        if (repsRes.error) throw repsRes.error;
-        if (dealsRes.error) throw dealsRes.error;
-
-        const repsWithTenant: RepWithTenant[] = (repsRes.data ?? []).map((r) => ({
-          ...mapRepRow(r),
-          tenantId: r.tenant_id,
-          authUserId: r.auth_user_id ?? null,
-        }));
-        setRepsRaw(repsWithTenant);
-        setDeals((dealsRes.data ?? []).map(mapDealRow));
-      } catch (err) {
-        if (mounted) {
-          setError(err instanceof Error ? err.message : "Failed to load data");
+    async function recover() {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (cancelled || !session) return;
+      for (let attempt = 1; attempt <= maxRetries; attempt++) {
+        try {
+          const res = await fetch("/api/signup-complete", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${session.access_token}`,
+            },
+          });
+          if (res.ok) {
+            loadData();
+            return;
+          }
+          if (attempt < maxRetries) {
+            await new Promise((r) => setTimeout(r, retryDelayMs * attempt));
+          }
+        } catch {
+          if (attempt < maxRetries) {
+            await new Promise((r) => setTimeout(r, retryDelayMs * attempt));
+          }
         }
-      } finally {
-        if (mounted) setLoading(false);
       }
     }
-
-    load();
-    return () => {
-      mounted = false;
-    };
-  }, []);
+    recover();
+    return () => { cancelled = true; };
+  }, [user, loading, myRepId, repsRaw.length, loadData]);
 
   // Restore selectedRepId from localStorage (validate against loaded reps)
   useEffect(() => {
@@ -250,21 +283,14 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
       }
     }
 
-    const { data, error: updateError } = await supabase
+    const { error: updateError } = await supabase
       .from("reps")
       .update(row)
-      .eq("id", repId)
-      .select("id")
-      .single();
+      .eq("id", repId);
 
     if (updateError) {
       console.error("[updateRepProfile]", updateError);
-      throw updateError;
-    }
-    if (!data) {
-      throw new Error(
-        "Profile update blocked. Run the RLS policies in supabase-reps-update-policies.sql in Supabase.",
-      );
+      throw new Error(updateError.message || "Update failed");
     }
 
     setRepsRaw((prev) =>

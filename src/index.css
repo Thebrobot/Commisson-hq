@@ -85,6 +85,7 @@
     overflow-x: hidden;
     width: 100%;
     -webkit-text-size-adjust: 100%;
+    overscroll-behavior: none;
   }
   body {
     @apply bg-background text-foreground antialiased;
@@ -92,7 +93,8 @@
     min-width: 320px;
     width: 100%;
     overflow-x: hidden;
-    -webkit-overflow-scrolling: touch;
+    overscroll-behavior: none;
+    touch-action: pan-y;
   }
   .dark {
     color-scheme: dark;

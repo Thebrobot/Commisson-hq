@@ -48,7 +48,7 @@ const HandoffList = () => {
       initial={reduceMotion ? false : { opacity: 0, y: 16 }}
       animate={reduceMotion ? undefined : { opacity: 1, y: 0 }}
       transition={{ duration: 0.4 }}
-      className="relative space-y-12"
+      className="relative space-y-6 pb-32"
     >
       {/* Subtle gradient blur orbs */}
       <div className="pointer-events-none absolute -right-20 -top-20 h-64 w-64 rounded-full bg-primary/20 blur-3xl" />

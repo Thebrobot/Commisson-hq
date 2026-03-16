@@ -32,14 +32,35 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return res.status(401).json({ error: "Invalid token" });
     }
 
-    const { data: existing } = await supabase
+    const { data: existingByAuth } = await supabase
       .from("reps")
       .select("id")
       .eq("auth_user_id", user.id)
       .maybeSingle();
 
-    if (existing) {
+    if (existingByAuth) {
       return res.status(200).json({ ok: true, message: "Rep already exists" });
+    }
+
+    // If rep exists by email but auth_user_id is null (e.g. manually added), link them
+    if (user.email) {
+      const { data: existingByEmail } = await supabase
+        .from("reps")
+        .select("id")
+        .eq("email", user.email)
+        .is("auth_user_id", null)
+        .maybeSingle();
+
+      if (existingByEmail) {
+        const { error: linkError } = await supabase
+          .from("reps")
+          .update({ auth_user_id: user.id })
+          .eq("id", existingByEmail.id);
+        if (!linkError) {
+          return res.status(200).json({ ok: true, message: "Rep linked to account" });
+        }
+        console.error("[signup-complete] Failed to link rep by email:", linkError);
+      }
     }
 
     const { data: tenants } = await supabase.from("tenants").select("id").limit(1);
@@ -74,6 +95,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     return res.status(200).json({ ok: true, message: "Rep created" });
   } catch (err) {
+    console.error("[signup-complete] Unexpected error:", err);
     return res.status(500).json({ error: "Internal server error" });
   }
 }

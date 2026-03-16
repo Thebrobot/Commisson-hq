@@ -89,7 +89,9 @@ const SettingsSheet = ({ open, onOpenChange }: SettingsSheetProps) => {
       }
       onOpenChange(false);
     } catch (err) {
-      setSaveError(err instanceof Error ? err.message : "Failed to save");
+      const msg = err instanceof Error ? err.message : "Failed to save";
+      setSaveError(msg);
+      toast.error(msg, { duration: 6000 });
     } finally {
       setSaving(false);
     }
