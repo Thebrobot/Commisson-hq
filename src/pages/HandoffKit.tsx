@@ -28,6 +28,7 @@ import {
 } from "@/lib/handoff";
 import { calcDealCommission, getProductById } from "@/lib/commission";
 import type { Handoff } from "@/types/commission";
+import { toast } from "sonner";
 
 const HandoffKit = () => {
   const reduceMotion = useReducedMotion();
@@ -103,8 +104,25 @@ MRR: $${summary.mrr}
 Rep: ${rep?.name ?? ""}`;
   }, [deal, rep]);
 
-  const handleCopyDiscordMessage = () => {
-    navigator.clipboard.writeText(discordMessage);
+  const handleCopyDiscordMessage = async () => {
+    try {
+      if (navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(discordMessage);
+        toast.success("Copied to clipboard");
+      } else {
+        const ta = document.createElement("textarea");
+        ta.value = discordMessage;
+        ta.style.position = "fixed";
+        ta.style.left = "-9999px";
+        document.body.appendChild(ta);
+        ta.select();
+        document.execCommand("copy");
+        document.body.removeChild(ta);
+        toast.success("Copied to clipboard");
+      }
+    } catch (err) {
+      toast.error("Copy failed – try selecting the text above manually");
+    }
   };
 
   // No dealId: show Handoff Hub landing with client list (user at /handoff)
