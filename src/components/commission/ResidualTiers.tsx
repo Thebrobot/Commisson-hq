@@ -28,9 +28,9 @@ const ResidualTiers = ({ currentMRR = 12400, variant = "default" }: ResidualTier
         <p className="mb-2 text-sm text-muted-foreground">
           Stack active MRR to unlock higher residual commission rates.
         </p>
-        <div className="flex items-end gap-3">
-          {/* Each tier: label at start + bar in same column so they align */}
-          <div className="min-w-0 flex-1 flex gap-1.5">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:gap-3">
+          {/* Mobile: vertical stack per tier. Desktop: horizontal bar */}
+          <div className="flex min-w-0 flex-1 flex-col gap-3 sm:flex-row sm:gap-1.5">
             {tierConfig.map((tier, i) => {
               const isComplete = currentIdx > i;
               const isCurrent = currentTier.label === tier.label;
@@ -43,15 +43,18 @@ const ResidualTiers = ({ currentMRR = 12400, variant = "default" }: ResidualTier
                   ? ((currentMRR - tier.mrr) / (tierConfig[i + 1].mrr - tier.mrr)) * 100
                   : 0;
               return (
-                <div key={tier.label} className="flex min-w-0 flex-1 flex-col gap-1">
+                <div
+                  key={tier.label}
+                  className="flex min-w-0 flex-1 flex-col gap-1 sm:min-w-0"
+                >
                   <span
-                    className={`text-left text-sm font-medium ${
+                    className={`text-left text-sm font-medium shrink-0 ${
                       currentTier.label === tier.label ? "font-semibold text-primary" : "text-muted-foreground"
                     }`}
                   >
                     {tier.label} {(tier.rate * 100).toFixed(0)}%
                   </span>
-                  <div className="h-2.5 w-full overflow-hidden rounded-full bg-secondary">
+                  <div className="h-2.5 w-full min-w-0 overflow-hidden rounded-full bg-secondary">
                     <motion.div
                       initial={reduceMotion ? false : { width: 0 }}
                       animate={reduceMotion ? undefined : { width: isComplete ? "100%" : isCurrent ? `${fill}%` : "0%" }}
