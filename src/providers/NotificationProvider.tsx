@@ -6,14 +6,11 @@ import {
   useState,
   type ReactNode,
 } from "react";
-import { mockNotifications } from "@/data/mockNotifications";
 import type { Notification } from "@/types/notification";
 import { useDashboard } from "@/providers/DashboardProvider";
 import { defaultHandoff, HANDOFF_ITEMS, handoffProgress, isHandoffComplete } from "@/lib/handoff";
 
 const STORAGE_KEY = "commission-notifications-read";
-
-const validIds = new Set(mockNotifications.map((n) => n.id));
 
 function getReadIds(): Set<string> {
   try {
@@ -21,7 +18,7 @@ function getReadIds(): Set<string> {
     if (!stored) return new Set();
     const parsed = JSON.parse(stored) as string[];
     const ids = Array.isArray(parsed) ? parsed : [];
-    return new Set(ids.filter((id) => validIds.has(id) || id.startsWith("handoff-")));
+    return new Set(ids.filter((id) => id.startsWith("handoff-")));
   } catch {
     return new Set();
   }
@@ -75,15 +72,10 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
   );
 
   const notifications = useMemo(() => {
-    const mock = mockNotifications.map((n) => ({
+    return handoffNotifications.map((n) => ({
       ...n,
       read: readIds.has(n.id),
     }));
-    const handoff = handoffNotifications.map((n) => ({
-      ...n,
-      read: readIds.has(n.id),
-    }));
-    return [...handoff, ...mock];
   }, [readIds, handoffNotifications]);
 
   const unreadCount = useMemo(
@@ -101,10 +93,7 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const markAllAsRead = useCallback(() => {
-    const allIds = new Set([
-      ...mockNotifications.map((n) => n.id),
-      ...handoffNotifications.map((n) => n.id),
-    ]);
+    const allIds = new Set(handoffNotifications.map((n) => n.id));
     persistReadIds(allIds);
     setReadIdsState(allIds);
   }, [handoffNotifications]);

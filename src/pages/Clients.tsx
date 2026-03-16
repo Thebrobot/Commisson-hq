@@ -117,10 +117,10 @@ const Clients = () => {
       initial={reduceMotion ? false : { opacity: 0, y: 16 }}
       animate={reduceMotion ? undefined : { opacity: 1, y: 0 }}
       transition={{ duration: 0.4 }}
-      className="space-y-4"
+      className="space-y-3 md:space-y-4"
     >
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex items-center gap-3">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
+        <div className="flex items-center gap-2 sm:gap-3">
           <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-primary/30 bg-primary/15">
             <Users className="h-5 w-5 text-primary" strokeWidth={2.5} />
           </div>
@@ -135,7 +135,7 @@ const Clients = () => {
         </div>
         <div className="flex flex-wrap items-center gap-3">
           {/* Commission summary: team total or rep-specific */}
-          <div className="rounded-lg border border-primary/20 bg-primary/5 px-4 py-2">
+          <div className="w-full sm:w-auto rounded-lg border border-primary/20 bg-primary/5 px-3 py-2 sm:px-4">
             {selectedRepId === "all" ? (
               <>
                 <p className="text-sm font-semibold text-primary">
@@ -183,7 +183,7 @@ const Clients = () => {
         </div>
       )}
 
-      <div className="flex flex-col gap-3 rounded-xl border border-border bg-muted/30 p-4 sm:flex-row sm:items-center">
+      <div className="hidden md:flex flex-col gap-3 rounded-xl border border-border bg-muted/30 p-4 sm:flex-row sm:items-center">
         <div className="flex items-center gap-2">
           <Info className="h-4 w-4 shrink-0 text-muted-foreground" />
           <p className="text-sm text-muted-foreground">

@@ -92,7 +92,7 @@ export default function ClientCard({ item, onClick, onHandoffClick, onPaidChange
             <span>Payout {longDateFormat.format(item.summary.payoutDate)}</span>
             <span className="font-mono-tabular">{currency.format(mrr)} MRR</span>
           </div>
-          <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
+          <div className="mt-3 flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
             <p className="font-mono-tabular text-lg font-bold text-primary">
               {currency.format(item.summary.totalCommission)}
             </p>
