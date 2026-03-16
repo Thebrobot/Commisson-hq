@@ -327,7 +327,10 @@ export function aggregateRepDeals(rep: Rep, deals: Deal[], now = new Date()): Re
   const availableDeals = summaries
     .filter(({ deal, summary }) => deal.status === "active" && !deal.paidOut && summary.availableNow)
     .map(({ deal }) => deal);
-  const totalMrr = summaries.reduce((sum, entry) => sum + entry.summary.mrr, 0);
+  // Total MRR = all active deals (including trial) - your full book for tier and residual
+  const totalMrr = summaries
+    .filter(({ deal }) => deal.status === "active")
+    .reduce((sum, entry) => sum + entry.summary.mrr, 0);
   const availableCommission = summaries.reduce((sum, entry) => {
     if (entry.deal.status !== "active" || entry.deal.paidOut || !entry.summary.availableNow) {
       return sum;
@@ -385,7 +388,7 @@ export function aggregateRepDeals(rep: Rep, deals: Deal[], now = new Date()): Re
     deals,
     activeDeals,
     availableDeals,
-    totalMrr: totalMrrPaying,
+    totalMrr,
     availableCommission,
     pendingCommission,
     paidCommission,

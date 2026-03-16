@@ -40,6 +40,7 @@ interface ClientEditSheetProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onSave: (dealId: string, updates: Partial<Deal>) => void;
+  onDelete?: (dealId: string) => void | Promise<void>;
 }
 
 const ClientEditSheet = ({
@@ -48,6 +49,7 @@ const ClientEditSheet = ({
   open,
   onOpenChange,
   onSave,
+  onDelete,
 }: ClientEditSheetProps) => {
   const [clientName, setClientName] = useState("");
   const [clientEmail, setClientEmail] = useState("");
@@ -163,11 +165,19 @@ const ClientEditSheet = ({
     onOpenChange(false);
   };
 
+  const handleDelete = async () => {
+    if (!onDelete || !confirm("Delete this deal? It will be marked as cancelled and removed from your active book.")) {
+      return;
+    }
+    await onDelete(deal.id);
+    onOpenChange(false);
+  };
+
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent
         side="right"
-        className="flex flex-col sm:max-w-lg overflow-hidden"
+        className="flex flex-col overflow-hidden w-full max-w-full sm:h-screen sm:max-h-screen sm:w-[min(95vw,1400px)] sm:max-w-[min(95vw,1400px)]"
       >
         <SheetHeader>
           <SheetTitle className="text-left">Edit client</SheetTitle>
@@ -182,9 +192,12 @@ const ClientEditSheet = ({
           </Button>
         </div>
 
-        <div className="mt-6 flex flex-1 flex-col gap-6 overflow-y-auto pr-2">
-          {/* Contact */}
-          <div className="space-y-3">
+        <div className="mt-6 flex flex-1 flex-col overflow-y-auto pl-8 pr-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 lg:gap-8 pb-4 items-start">
+            {/* Left column */}
+            <div className="flex flex-col gap-6">
+              {/* Contact */}
+              <div className="space-y-3">
             <h4 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
               Contact
             </h4>
@@ -293,7 +306,10 @@ const ClientEditSheet = ({
               placeholder="Leave blank if no trial"
             />
           </div>
+            </div>
 
+            {/* Right column */}
+            <div className="flex flex-col gap-6">
           {/* Products */}
           <div className="space-y-3">
             <div className="flex items-center justify-between">
@@ -551,13 +567,27 @@ const ClientEditSheet = ({
               </p>
             </div>
           </div>
+            </div>
+          </div>
         </div>
 
-        <SheetFooter className="mt-6 shrink-0">
-          <Button variant="outline" onClick={() => onOpenChange(false)}>
-            Cancel
-          </Button>
-          <Button onClick={handleSave}>Save changes</Button>
+        <SheetFooter className="mt-6 shrink-0 flex-row flex-wrap gap-2">
+          {onDelete && !isCancelled && (
+            <Button
+              variant="ghost"
+              className="mr-auto text-destructive hover:bg-destructive/10 hover:text-destructive"
+              onClick={handleDelete}
+            >
+              <Trash2 className="mr-2 h-4 w-4" />
+              Delete deal
+            </Button>
+          )}
+          <div className="flex gap-2 ml-auto">
+            <Button variant="outline" onClick={() => onOpenChange(false)}>
+              Cancel
+            </Button>
+            <Button onClick={handleSave}>Save changes</Button>
+          </div>
         </SheetFooter>
       </SheetContent>
     </Sheet>

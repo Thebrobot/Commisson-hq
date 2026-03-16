@@ -238,11 +238,33 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
 
     if (Object.keys(row).length === 0) return;
 
-    const { error: updateError } = await supabase.from("reps").update(row).eq("id", repId);
+    const newEmail = updates.email?.trim();
+    const isOwnEmailChange = repId === myRepId && newEmail;
+
+    // When changing your own email, update Supabase Auth first (login credentials)
+    if (isOwnEmailChange) {
+      const { error: authError } = await supabase.auth.updateUser({ email: newEmail });
+      if (authError) {
+        console.error("[updateRepProfile] auth", authError);
+        throw authError;
+      }
+    }
+
+    const { data, error: updateError } = await supabase
+      .from("reps")
+      .update(row)
+      .eq("id", repId)
+      .select("id")
+      .single();
 
     if (updateError) {
       console.error("[updateRepProfile]", updateError);
       throw updateError;
+    }
+    if (!data) {
+      throw new Error(
+        "Profile update blocked. Run the RLS policies in supabase-reps-update-policies.sql in Supabase.",
+      );
     }
 
     setRepsRaw((prev) =>
@@ -258,7 +280,7 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
           : r,
       ),
     );
-  }, []);
+  }, [myRepId]);
 
   const reps = useMemo(() => repsRaw, [repsRaw]);
 

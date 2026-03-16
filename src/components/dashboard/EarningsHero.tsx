@@ -197,13 +197,18 @@ function ResidualCircleCard({
           </div>
         </div>
 
+        {/* Current MRR - so user can verify the system has the right number */}
+        <p className="mt-2 text-xs font-medium text-muted-foreground">
+          Current MRR: {currency.format(totalMrr)}
+        </p>
+
         {/* Percentage to next tier - below circle */}
         {!atMaxTier ? (
-          <p className="mt-2 text-sm font-semibold text-muted-foreground">
+          <p className="mt-1 text-sm font-semibold text-muted-foreground">
             {progressToNext.toFixed(0)}% to {nextTier?.label ?? "Foundation"}
           </p>
         ) : (
-          <p className="mt-2 text-sm font-semibold text-primary">Max tier</p>
+          <p className="mt-1 text-sm font-semibold text-primary">Max tier</p>
         )}
 
         {/* Last 90 days trend - compact bar + line with vs last month integrated */}

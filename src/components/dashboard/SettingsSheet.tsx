@@ -20,6 +20,7 @@ import {
 import { useDashboard } from "@/providers/DashboardProvider";
 import { useAuth } from "@/providers/AuthProvider";
 import RepAvatar from "@/components/dashboard/RepAvatar";
+import { toast } from "sonner";
 import { LogOut } from "lucide-react";
 
 interface SettingsSheetProps {
@@ -78,7 +79,14 @@ const SettingsSheet = ({ open, onOpenChange }: SettingsSheetProps) => {
         avatar: avatar.trim(),
       };
       if (canChangeRole) updates.role = role;
+      const emailChanged = isEditingSelf && email.trim() !== rep.email;
       await updateRepProfile(editingRepId, updates);
+      if (emailChanged) {
+        toast.info(
+          "Check your new email for a confirmation link. You’ll need to verify it before you can log in with the new address.",
+          { duration: 8000 },
+        );
+      }
       onOpenChange(false);
     } catch (err) {
       setSaveError(err instanceof Error ? err.message : "Failed to save");
@@ -97,7 +105,7 @@ const SettingsSheet = ({ open, onOpenChange }: SettingsSheetProps) => {
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent side="right" className="w-full sm:max-w-md">
+      <SheetContent side="right" className="flex flex-col overflow-hidden w-full max-w-full sm:h-screen sm:max-h-screen sm:w-[min(95vw,1400px)] sm:max-w-[min(95vw,1400px)]">
         <SheetHeader>
           <SheetTitle>Profile settings</SheetTitle>
           <SheetDescription>

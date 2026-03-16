@@ -30,7 +30,7 @@ const ClientProfileSheet = ({ item, open, onOpenChange }: ClientProfileSheetProp
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent side="right" className="flex flex-col sm:max-w-md">
+      <SheetContent side="right" className="flex flex-col w-full max-w-full sm:h-screen sm:max-h-screen sm:w-[min(95vw,1400px)] sm:max-w-[min(95vw,1400px)] overflow-hidden">
         <SheetHeader>
           <SheetTitle className="text-left">Client profile</SheetTitle>
         </SheetHeader>

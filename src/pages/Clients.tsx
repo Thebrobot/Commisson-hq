@@ -47,7 +47,7 @@ const Clients = () => {
   const reduceMotion = useReducedMotion();
   const location = useLocation();
   const navigate = useNavigate();
-  const { deals, reps, selectedRepId, setSelectedRepId, updateDeal, addDeal, loading } = useDashboard();
+  const { deals, reps, selectedRepId, setSelectedRepId, updateDeal, addDeal, cancelDeal, loading } = useDashboard();
   const [selectedItem, setSelectedItem] = useState<DealFeedItem | null>(null);
   const [availabilityFilter, setAvailabilityFilter] = useState<AvailabilityFilter>("all");
 
@@ -380,6 +380,10 @@ const Clients = () => {
         open={selectedItem != null}
         onOpenChange={(open) => !open && setSelectedItem(null)}
         onSave={updateDeal}
+        onDelete={async (dealId) => {
+          await cancelDeal(dealId);
+          setSelectedItem(null);
+        }}
       />
     </motion.div>
   );
