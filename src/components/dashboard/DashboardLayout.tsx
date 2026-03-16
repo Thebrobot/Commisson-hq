@@ -31,8 +31,8 @@ const DashboardLayout = () => {
   }
 
   return (
-    <div className="min-h-screen bg-background">
-      <div className="flex w-full min-w-0 flex-col gap-1 px-4 pt-4 pb-8 sm:gap-4 sm:px-6 sm:pt-6 lg:gap-6 lg:px-8 lg:pt-8 lg:pb-8">
+    <div className="min-h-screen w-full max-w-full overflow-x-hidden bg-background">
+      <div className="flex w-full max-w-full min-w-0 flex-col gap-1 px-4 pt-4 pb-8 sm:gap-4 sm:px-6 sm:pt-6 lg:gap-6 lg:px-8 lg:pt-8 lg:pb-8">
         <DashboardHeader />
         <main className="min-w-0 w-full">
           <Outlet />
