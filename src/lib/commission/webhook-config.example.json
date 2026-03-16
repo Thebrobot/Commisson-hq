@@ -1,0 +1,7 @@
+{
+  "contact_id": "{{contact.id}}",
+  "company_name": "{{contact.company_name}}",
+  "contact_email": "{{contact.email}}",
+  "contact_phone": "{{contact.phone}}",
+  "assigned_rep_email": "{{contact.rep_email}}"
+}

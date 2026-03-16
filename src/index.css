@@ -1,0 +1,153 @@
+@import url("https://fonts.googleapis.com/css2?family=Geist+Mono:wght@400;700&display=swap");
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    /* Brobot One light theme */
+    --background: 220 9% 96%; /* #f3f4f6 */
+    --foreground: 222 47% 11%; /* slate-800 body */
+    --card: 0 0% 100%;
+    --card-foreground: 222 47% 11%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 222 47% 11%;
+    --primary: 221 83% 53%; /* blue-600 – strong contrast on light backgrounds */
+    --primary-foreground: 0 0% 98%;
+    --secondary: 220 9% 96%;
+    --secondary-foreground: 222 47% 11%;
+    --muted: 220 14% 96%;
+    --muted-foreground: 215 22% 28%; /* darker for readability – between slate-600/700 */
+    --accent: 20 90% 48%;
+    --accent-foreground: 0 0% 98%;
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 220 13% 91%; /* #e5e7eb */
+    --input: 220 13% 91%;
+    --ring: 221 83% 53%;
+    --radius: 0.5rem;
+    --sidebar-background: 220 9% 96%;
+    --sidebar-foreground: 222 47% 11%;
+    --sidebar-primary: 221 83% 53%;
+    --sidebar-primary-foreground: 0 0% 98%;
+    --sidebar-accent: 220 14% 94%;
+    --sidebar-accent-foreground: 222 47% 11%;
+    --sidebar-border: 220 13% 91%;
+    --sidebar-ring: 221 83% 53%;
+    /* Brobot One slate scale for direct use */
+    --slate-800: 222 47% 11%;
+    --slate-700: 215 28% 17%;
+    --slate-600: 215 20% 27%;
+    --slate-500: 215 16% 37%;
+    --slate-400: 215 20% 51%;
+  }
+
+  .dark {
+    /* Dark theme */
+    color-scheme: dark;
+    --background: 240 10% 3.9%;
+    --foreground: 0 0% 98%;
+    --card: 240 6% 8%;
+    --card-foreground: 0 0% 98%;
+    --popover: 240 6% 8%;
+    --popover-foreground: 0 0% 98%;
+    --primary: 142 70% 55%;
+    --primary-foreground: 240 10% 3.9%;
+    --secondary: 240 4% 16%;
+    --secondary-foreground: 0 0% 98%;
+    --muted: 240 4% 16%;
+    --muted-foreground: 240 5% 68%; /* lighter for readability on dark bg */
+    --accent: 20 90% 55%;
+    --accent-foreground: 0 0% 98%;
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 240 3.7% 15.9%;
+    --input: 240 3.7% 15.9%;
+    --ring: 142 70% 55%;
+    --sidebar-background: 240 6% 6%;
+    --sidebar-foreground: 0 0% 85%;
+    --sidebar-primary: 142 70% 55%;
+    --sidebar-primary-foreground: 240 10% 3.9%;
+    --sidebar-accent: 240 4% 12%;
+    --sidebar-accent-foreground: 0 0% 98%;
+    --sidebar-border: 240 3.7% 15.9%;
+    --sidebar-ring: 142 70% 55%;
+  }
+
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground antialiased;
+    font-family: ui-sans-serif, system-ui, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
+    min-width: 320px;
+  }
+  .dark {
+    color-scheme: dark;
+  }
+  .dark body {
+    background-image:
+      radial-gradient(circle at top left, rgba(34, 197, 94, 0.12), transparent 24rem),
+      radial-gradient(circle at top right, rgba(249, 115, 22, 0.08), transparent 18rem);
+  }
+  #root {
+    min-height: 100vh;
+  }
+}
+
+@layer components {
+  .font-mono-tabular {
+    font-family: 'Geist Mono', 'Fragment Mono', monospace;
+    font-variant-numeric: tabular-nums;
+  }
+  .obsidian-card {
+    @apply relative overflow-hidden rounded-2xl border bg-white shadow-sm;
+    border-color: #e5e7eb;
+  }
+  .dark .obsidian-card {
+    @apply border-border bg-card/50 backdrop-blur-xl;
+    box-shadow: 0 4px 6px -1px rgba(0,0,0,0.3), 0 10px 15px -3px rgba(0,0,0,0.5);
+  }
+  /* Light mode: no top highlight – clean Activity Dashboard style */
+  .obsidian-card::before {
+    display: none;
+  }
+  .dark .obsidian-card::before {
+    display: block;
+    content: '';
+    @apply absolute inset-x-0 top-0 h-px;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.08), transparent);
+  }
+  .snap-transition {
+    transition: all 150ms cubic-bezier(0.2, 0.8, 0.2, 1);
+  }
+  .snap-transition:active {
+    transform: scale(0.97);
+    filter: brightness(1.1);
+  }
+  .money-gradient {
+    background: linear-gradient(135deg, hsl(var(--primary)), #fff);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+  .progress-money {
+    background: linear-gradient(to right, hsl(var(--primary)), #fff);
+  }
+  .iframe-safe-grid {
+    grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr));
+  }
+  @keyframes double-pulse {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    25% { opacity: 0.9; transform: scale(1.04); }
+    50% { opacity: 1; transform: scale(1); }
+    75% { opacity: 0.9; transform: scale(1.04); }
+  }
+  .animate-double-pulse {
+    animation: double-pulse 1.4s ease-in-out;
+  }
+}

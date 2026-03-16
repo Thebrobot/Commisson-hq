@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="en" suppressHydrationWarning>
+  <head>
+    <script>
+      (function(){
+        try {
+          var theme = localStorage.getItem('commission-hq-theme');
+          var systemDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+          if (theme === 'dark' || (theme !== 'light' && systemDark)) {
+            document.documentElement.classList.add('dark');
+          }
+        } catch (e) {}
+      })();
+    </script>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <!-- TODO: Set the document title to the name of your application -->
+    <title>Lovable App</title>
+    <meta name="description" content="Lovable Generated Project" />
+    <meta name="author" content="Lovable" />
+
+    <!-- TODO: Update og:title to match your application name -->
+    <meta property="og:title" content="Lovable App" />
+    <meta property="og:description" content="Lovable Generated Project" />
+    <meta property="og:type" content="website" />
+    <meta property="og:image" content="https://lovable.dev/opengraph-image-p98pqg.png" />
+
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:site" content="@Lovable" />
+    <meta name="twitter:image" content="https://lovable.dev/opengraph-image-p98pqg.png" />
+  </head>
+
+  <body>
+    <div id="root">
+      <div style="display:flex;align-items:center;justify-content:center;min-height:100vh;font-family:system-ui;color:#64748b">
+        Loading…
+      </div>
+    </div>
+    <script>
+      window.addEventListener('error', function(e) {
+        var root = document.getElementById('root');
+        if (root && root.textContent && root.textContent.includes('Loading')) {
+          root.innerHTML = '<div style="min-height:100vh;display:flex;align-items:center;justify-content:center;font-family:system-ui;padding:24px;background:#fef2f2"><div style="max-width:512px;background:#fff;border:2px solid #dc2626;border-radius:12px;padding:24px"><h1 style="font-size:18px;font-weight:bold;color:#dc2626;margin-bottom:8px">Failed to load app</h1><p style="font-size:14px;color:#1f2937">' + (e.message || 'Unknown error') + '</p><p style="font-size:12px;color:#6b7280;margin-top:8px">Check the browser console (F12) for details.</p></div></div>';
+        }
+      });
+      window.addEventListener('unhandledrejection', function(e) {
+        var root = document.getElementById('root');
+        if (root) {
+          var msg = (e.reason && (e.reason.message || String(e.reason))) || 'Unknown error';
+          root.innerHTML = '<div style="min-height:100vh;display:flex;align-items:center;justify-content:center;font-family:system-ui;padding:24px;background:#fef2f2"><div style="max-width:512px;background:#fff;border:2px solid #dc2626;border-radius:12px;padding:24px"><h1 style="font-size:18px;font-weight:bold;color:#dc2626;margin-bottom:8px">Failed to load app</h1><p style="font-size:14px;color:#1f2937">' + msg + '</p><p style="font-size:12px;color:#6b7280;margin-top:8px">Check the browser console (F12) for details.</p></div></div>';
+        }
+      });
+    </script>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>
