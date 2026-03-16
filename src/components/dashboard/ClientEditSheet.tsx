@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { ClipboardCheck, ExternalLink, Mail, Phone, Plus, Trash2, User } from "lucide-react";
+import { Ban, ClipboardCheck, ExternalLink, Mail, Phone, Plus, Trash2, User } from "lucide-react";
 import {
   calcDealCommission,
   currency,
@@ -40,6 +40,7 @@ interface ClientEditSheetProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onSave: (dealId: string, updates: Partial<Deal>) => void;
+  onCancelDeal?: (dealId: string) => void | Promise<void>;
   onDelete?: (dealId: string) => void | Promise<void>;
 }
 
@@ -49,6 +50,7 @@ const ClientEditSheet = ({
   open,
   onOpenChange,
   onSave,
+  onCancelDeal,
   onDelete,
 }: ClientEditSheetProps) => {
   const [clientName, setClientName] = useState("");
@@ -165,8 +167,16 @@ const ClientEditSheet = ({
     onOpenChange(false);
   };
 
+  const handleCancelDeal = async () => {
+    if (!onCancelDeal || !confirm("Mark this deal as cancelled? The row will remain but the status will change to cancelled.")) {
+      return;
+    }
+    await onCancelDeal(deal.id);
+    onOpenChange(false);
+  };
+
   const handleDelete = async () => {
-    if (!onDelete || !confirm("Delete this deal? It will be marked as cancelled and removed from your active book.")) {
+    if (!onDelete || !confirm("Permanently delete this deal? This cannot be undone.")) {
       return;
     }
     await onDelete(deal.id);
@@ -577,21 +587,33 @@ const ClientEditSheet = ({
         </div>
 
         <SheetFooter className="mt-6 shrink-0 flex-row flex-wrap gap-2">
-          {onDelete && !isCancelled && (
-            <Button
-              variant="ghost"
-              className="mr-auto text-destructive hover:bg-destructive/10 hover:text-destructive"
-              onClick={handleDelete}
-            >
-              <Trash2 className="mr-2 h-4 w-4" />
-              Delete deal
-            </Button>
-          )}
+          <div className="flex gap-2 mr-auto">
+            {onCancelDeal && !isCancelled && (
+              <Button
+                variant="ghost"
+                className="text-amber-600 hover:bg-amber-500/10 hover:text-amber-600 dark:text-amber-500 dark:hover:bg-amber-500/10"
+                onClick={handleCancelDeal}
+              >
+                <Ban className="mr-2 h-4 w-4" />
+                Cancel deal
+              </Button>
+            )}
+            {onDelete && (
+              <Button
+                variant="ghost"
+                className="text-destructive hover:bg-destructive/10 hover:text-destructive"
+                onClick={handleDelete}
+              >
+                <Trash2 className="mr-2 h-4 w-4" />
+                Delete deal
+              </Button>
+            )}
+          </div>
           <div className="flex gap-2 ml-auto">
             <Button variant="outline" onClick={() => onOpenChange(false)}>
-              Cancel
+              Close
             </Button>
-            <Button onClick={handleSave}>Save changes</Button>
+            <Button onClick={handleSave} disabled={isCancelled}>Save changes</Button>
           </div>
         </SheetFooter>
       </SheetContent>

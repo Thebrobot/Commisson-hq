@@ -35,6 +35,7 @@ interface DashboardContextValue {
   addDeal: (partial?: Partial<Omit<Deal, "id">>) => Promise<Deal | null>;
   markDealPaid: (dealId: string) => Promise<void>;
   cancelDeal: (dealId: string) => Promise<void>;
+  deleteDeal: (dealId: string) => Promise<void>;
   updateDeal: (dealId: string, updates: Partial<Deal>) => Promise<void>;
   updateRepProfile: (repId: string, updates: { name?: string; email?: string; avatar?: string; role?: "rep" | "manager" }) => Promise<void>;
   myRepId: string | null;
@@ -233,6 +234,20 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
     );
   }, []);
 
+  const deleteDeal = useCallback(async (dealId: string) => {
+    const { error: deleteError } = await supabase
+      .from("deals")
+      .delete()
+      .eq("id", dealId);
+
+    if (deleteError) {
+      console.error("[deleteDeal]", deleteError);
+      return;
+    }
+
+    setDeals((prev) => prev.filter((d) => d.id !== dealId));
+  }, []);
+
   const updateDeal = useCallback(async (dealId: string, updates: Partial<Deal>) => {
     if (!tenantId) return;
     const row: Record<string, unknown> = {};
@@ -341,6 +356,7 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
       addDeal,
       markDealPaid,
       cancelDeal,
+      deleteDeal,
       updateDeal,
       updateRepProfile,
       myRepId,
@@ -355,6 +371,7 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
     [
       addDeal,
       cancelDeal,
+      deleteDeal,
       deals,
       error,
       feedItems,
