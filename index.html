@@ -30,6 +30,9 @@
   </head>
 
   <body>
+    <script>
+      (function(){ try { if (window.self !== window.top) document.documentElement.classList.add('embedded'); } catch(e){} })();
+    </script>
     <div id="root">
       <div style="display:flex;align-items:center;justify-content:center;min-height:100vh;font-family:system-ui;color:#64748b">
         Loading…

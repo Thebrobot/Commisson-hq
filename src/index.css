@@ -87,6 +87,15 @@
     -webkit-text-size-adjust: 100%;
     overscroll-behavior: none;
   }
+  /* Allow scroll chaining to parent when embedded in iframe (e.g. HighLevel dashboard) */
+  html.embedded,
+  html.embedded body,
+  html.embedded [class*="overscroll"] {
+    overscroll-behavior: auto;
+  }
+  html.embedded body {
+    touch-action: auto;
+  }
   body {
     @apply bg-background text-foreground antialiased;
     font-family: ui-sans-serif, system-ui, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";

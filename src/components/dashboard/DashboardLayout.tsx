@@ -31,7 +31,7 @@ const DashboardLayout = () => {
   }
 
   return (
-    <div className="min-h-screen w-full max-w-full overflow-x-hidden overscroll-none bg-background">
+    <div className="min-h-screen w-full max-w-full overflow-x-hidden bg-background [.embedded_&]:overscroll-auto">
       <div className="flex w-full max-w-full min-w-0 flex-col gap-1 px-4 pt-2 pb-24 sm:gap-1.5 sm:px-6 sm:pt-3 sm:pb-28 lg:gap-2 lg:px-8 lg:pt-4 lg:pb-[max(8rem,calc(2rem+env(safe-area-inset-bottom)))]">
         <DashboardHeader />
         <main className="min-w-0 w-full">
