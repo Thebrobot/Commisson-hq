@@ -1,7 +1,9 @@
+import { useEffect, useState } from "react";
 import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 import { ThemeProvider } from "next-themes";
 import ErrorBoundary from "@/components/ErrorBoundary";
 import { AuthProvider, useAuth } from "@/providers/AuthProvider";
+import { supabase } from "@/lib/supabase";
 import { DashboardProvider } from "@/providers/DashboardProvider";
 import { NotificationProvider } from "@/providers/NotificationProvider";
 import { Toaster } from "@/components/ui/sonner";
@@ -28,7 +30,30 @@ function LoginRoute() {
 
 function ProtectedRoutes() {
   const { user, loading } = useAuth();
-  if (loading) {
+  const [repReady, setRepReady] = useState(false);
+
+  useEffect(() => {
+    if (!user) return;
+    let cancelled = false;
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (cancelled || !session) {
+        setRepReady(true);
+        return;
+      }
+      fetch("/api/signup-complete", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${session.access_token}`,
+        },
+      })
+        .then(() => { if (!cancelled) setRepReady(true); })
+        .catch(() => { if (!cancelled) setRepReady(true); });
+    });
+    return () => { cancelled = true; };
+  }, [user]);
+
+  if (loading || (user && !repReady)) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-background">
         <div className="flex flex-col items-center gap-4">
