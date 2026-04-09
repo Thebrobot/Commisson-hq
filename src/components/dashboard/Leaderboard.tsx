@@ -1,5 +1,5 @@
 import { motion, useReducedMotion } from "framer-motion";
-import { ChevronRight, Crown, Medal } from "lucide-react";
+import { ChevronRight, Crown, Star } from "lucide-react";
 import { currency } from "@/lib/commission";
 import { useDashboard } from "@/providers/DashboardProvider";
 import RepAvatar from "@/components/dashboard/RepAvatar";
@@ -59,7 +59,7 @@ const Leaderboard = () => {
                   <p className={`truncate text-sm font-semibold ${isActive ? "text-primary" : "text-foreground"}`}>
                       {entry.rep.name}
                     </p>
-                    {entry.rank <= 3 && <Medal className="h-3.5 w-3.5 text-accent" />}
+                    {entry.rank <= 3 && <Star className="h-3 w-3 fill-primary/60 text-primary/60" />}
                   </div>
                   <p className="font-mono-tabular text-sm font-medium text-foreground">
                     {currency.format(entry.thisMonthCommission)} this month

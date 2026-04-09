@@ -274,7 +274,7 @@ const ClientEditSheet = ({
                     className="flex items-center gap-2 rounded-lg border border-border bg-secondary/20 px-3 py-2.5 text-sm font-medium text-primary hover:bg-secondary/40 hover:underline"
                   >
                     <ExternalLink className="h-4 w-4 shrink-0" />
-                    View in HighLevel
+                    View in Brobot
                   </a>
                 </div>
               )}

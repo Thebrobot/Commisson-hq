@@ -64,9 +64,11 @@ const HandoffList = () => {
             <ClipboardCheck className="h-6 w-6 text-white" strokeWidth={2.5} />
           </motion.div>
           <div>
-            <h2 className="text-2xl font-bold tracking-tight text-foreground">
-              Handoff Hub
-            </h2>
+            <h1 className="text-3xl sm:text-4xl leading-none mb-2">
+          <span className="dashboard-title-primary">HANDOFF </span>
+          <span className="dashboard-title-accent">HUB</span>
+        </h1>
+        <div className="mb-3 h-0.5 w-10 rounded-full bg-primary" />
             <p className="mt-1 text-sm text-muted-foreground max-w-xl">
               Complete order handoffs, manage pending work, and access sales links.
             </p>

@@ -94,7 +94,7 @@ const ClientProfileSheet = ({ item, open, onOpenChange }: ClientProfileSheetProp
                       className="flex items-center gap-2 font-medium text-primary hover:underline"
                     >
                       <ExternalLink className="h-4 w-4 shrink-0" />
-                      View in HighLevel
+                      View in Brobot
                     </a>
                   </div>
                 </div>

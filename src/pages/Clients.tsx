@@ -236,19 +236,23 @@ const Clients = () => {
       transition={{ duration: 0.4 }}
       className="space-y-3 md:space-y-4"
     >
+      {/* Page title */}
+      <div className="pt-1 mb-1">
+        <h1 className="text-3xl sm:text-4xl leading-none">
+          <span className="dashboard-title-primary">ACTIVE </span>
+          <span className="dashboard-title-accent">CLIENTS</span>
+        </h1>
+        <div className="mt-2 h-0.5 w-10 rounded-full bg-primary" />
+      </div>
+
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
         <div className="flex items-center gap-2 sm:gap-3">
-          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-primary/30 bg-primary/15">
-            <Users className="h-5 w-5 text-primary" strokeWidth={2.5} />
+          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-primary/30 bg-primary/10">
+            <Users className="h-4 w-4 text-primary" strokeWidth={2.5} />
           </div>
-          <div>
-            <h2 className="text-xl font-bold tracking-tight text-foreground">
-              Active Clients
-            </h2>
-            <p className="text-sm text-muted-foreground">
-              {filteredItems.length} client{filteredItems.length !== 1 ? "s" : ""}{search ? ` matching "${search}"` : ""} · <span className="hidden lg:inline">Click a row to edit</span><span className="lg:hidden">Tap card to edit</span>
-            </p>
-          </div>
+          <p className="text-sm text-muted-foreground">
+            {filteredItems.length} client{filteredItems.length !== 1 ? "s" : ""}{search ? ` matching "${search}"` : ""} · <span className="hidden lg:inline">Click a row to edit</span><span className="lg:hidden">Tap card to edit</span>
+          </p>
         </div>
         <div className="flex flex-wrap items-center gap-3">
           <div className="w-full sm:w-auto rounded-lg border border-primary/20 bg-primary/5 px-3 py-2 sm:px-4">

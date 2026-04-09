@@ -131,8 +131,11 @@ export default function Reps() {
             <Users className="h-5 w-5 text-primary" strokeWidth={2.5} />
           </div>
           <div>
-            <h2 className="text-xl font-bold tracking-tight text-foreground">Reps</h2>
-            <p className="text-sm text-muted-foreground">{reps.length} rep{reps.length !== 1 ? "s" : ""} on your team</p>
+            <h1 className="text-3xl sm:text-4xl leading-none">
+              <span className="dashboard-title-primary">YOUR </span>
+              <span className="dashboard-title-accent">TEAM</span>
+            </h1>
+            <div className="mt-2 h-0.5 w-10 rounded-full bg-primary" />
           </div>
         </div>
         <Button

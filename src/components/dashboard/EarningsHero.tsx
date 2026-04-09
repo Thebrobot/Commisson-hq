@@ -146,11 +146,9 @@ function ResidualCircleCard({
 
   return (
     <div
-      className={`obsidian-card overflow-hidden p-5 flex flex-col items-center justify-center w-full relative ${
-        residualMonthly > 0 ? "border-l-4 border-l-primary/50" : "border-l-4 border-l-primary/30"
-      }`}
+      className="obsidian-card overflow-hidden p-5 flex flex-col items-center justify-center w-full relative border-t-2 border-t-primary/30"
     >
-      <div className="absolute inset-0 bg-gradient-to-br from-primary/5 to-transparent pointer-events-none" />
+      <div className="absolute inset-0 bg-gradient-to-b from-primary/5 to-transparent pointer-events-none" />
       <div className="relative z-10 w-full flex flex-col items-center">
         <p className="text-xs font-bold uppercase tracking-[0.2em] text-foreground mb-3">
           Monthly revenue share
@@ -262,7 +260,7 @@ function ResidualShareCard({
         );
 
   return (
-    <div className="flex items-center gap-3 rounded-2xl border border-border border-l-4 border-l-primary/60 bg-primary/5 p-3.5 shadow-sm transition-shadow hover:shadow-md dark:bg-primary/10">
+    <div className="stat-card p-3.5">
       <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary/15 text-primary dark:bg-primary/20">
         <ArrowUpRight className="h-4 w-4" strokeWidth={2.5} />
       </div>
@@ -377,29 +375,9 @@ const ManagerSpotlightBoard = ({
 
         <div className="grid gap-3 sm:grid-cols-3">
           {[
-            {
-              label: "MRR",
-              value: currency.format(teamMrr),
-              detail: "",
-              variant: "primary" as const,
-              icon: TrendingUp,
-            },
-            {
-              label: "Next payout",
-              value: nextPayoutDate ? longDateFormat.format(nextPayoutDate) : "Pending",
-              detail: "",
-              variant: "primary" as const,
-              icon: CalendarClock,
-            },
-            {
-              label: "Top rep",
-              value: currency.format(topPerformerValue),
-              detail: "",
-              avatar: topPerformerAvatar,
-              avatarName: topPerformerName,
-              variant: "yellow" as const,
-              icon: Crown,
-            },
+            { label: "MRR", value: currency.format(teamMrr), icon: TrendingUp },
+            { label: "Next payout", value: nextPayoutDate ? longDateFormat.format(nextPayoutDate) : "Pending", icon: CalendarClock },
+            { label: "Top rep", value: currency.format(topPerformerValue), avatar: topPerformerAvatar, avatarName: topPerformerName, icon: Crown },
           ].map((card, i) => (
             <motion.div
               key={card.label}
@@ -407,7 +385,7 @@ const ManagerSpotlightBoard = ({
               animate={reduceMotion ? undefined : { opacity: 1, y: 0 }}
               transition={{ delay: 0.25 + i * 0.06, duration: 0.4 }}
             >
-              <StatCard {...card} />
+              <StatCardEnhanced {...card} />
             </motion.div>
           ))}
         </div>
@@ -416,64 +394,83 @@ const ManagerSpotlightBoard = ({
   );
 };
 
-const statCardVariants = {
-  primary: {
-    card: "border-l-primary/60 bg-primary/5 dark:bg-primary/10",
-    icon: "bg-primary/15 text-primary dark:bg-primary/20",
-  },
-  accent: {
-    card: "border-l-accent/60 bg-accent/5 dark:bg-accent/10",
-    icon: "bg-accent/15 text-accent dark:bg-accent/20",
-  },
-  yellow: {
-    card: "border-l-yellow-500/60 bg-yellow-500/10 dark:bg-yellow-500/15",
-    icon: "bg-yellow-500/20 text-yellow-600 dark:bg-yellow-400/30 dark:text-yellow-400",
-  },
-};
-
 const StatCard = ({
   label,
   value,
   detail,
   avatar,
+  avatarName,
   icon: Icon,
-  variant = "primary",
 }: {
   label?: string;
   value: string;
   detail: string;
   avatar?: string;
+  avatarName?: string;
   icon?: React.ComponentType<{ className?: string }>;
   variant?: "primary" | "accent" | "yellow";
 }) => {
-  const styles = statCardVariants[variant ?? "primary"];
   return (
-    <div className={`rounded-2xl border border-border border-l-4 p-3.5 shadow-sm transition-shadow hover:shadow-md ${styles.card}`}>
-      <div className="flex items-center gap-3">
-        {Icon && !avatar && (
-          <div className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg ${styles.icon}`}>
-            <Icon className="h-4 w-4" strokeWidth={2.5} />
-          </div>
-        )}
-        <div className="min-w-0 flex-1 flex flex-col">
-          {label && <p className="text-[11px] font-medium uppercase tracking-[0.2em] text-muted-foreground">{label}</p>}
-          <p className="mt-0.5 font-mono-tabular text-lg font-semibold tracking-tight text-foreground sm:text-xl">{value}</p>
-          {!avatar && detail && <p className="mt-0.5 text-[11px] leading-relaxed text-muted-foreground">{detail}</p>}
+    <div className="stat-card">
+      {Icon && !avatar && (
+        <div className="stat-card-icon">
+          <Icon className="h-4 w-4" strokeWidth={2.5} />
         </div>
-        {avatar && (
-          <div className="flex shrink-0 items-center gap-2 ml-auto">
-            {Icon && (
-              <div className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg ${styles.icon}`}>
-                <Icon className="h-4 w-4" strokeWidth={2.5} />
-              </div>
-            )}
-            <div className="flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-full bg-yellow-500/20 text-sm font-bold text-yellow-700 dark:bg-yellow-400/25 dark:text-yellow-400">
-              {avatar && (avatar.startsWith("http") || avatar.startsWith("data:")) ? (
-                <img src={avatar} alt="" className="h-full w-full object-cover" />
-              ) : (
-                avatar
-              )}
+      )}
+      <div className="min-w-0 flex-1 flex flex-col">
+        {label && <p className="text-[11px] font-medium uppercase tracking-[0.2em] text-muted-foreground">{label}</p>}
+        <p className="mt-0.5 font-mono-tabular text-lg font-semibold tracking-tight text-foreground sm:text-xl">{value}</p>
+        {!avatar && detail && <p className="mt-0.5 text-[11px] leading-relaxed text-muted-foreground">{detail}</p>}
+      </div>
+      {avatar && (
+        <div className="flex shrink-0 items-center gap-2 ml-auto">
+          {Icon && (
+            <div className="stat-card-icon">
+              <Icon className="h-4 w-4" strokeWidth={2.5} />
             </div>
+          )}
+          <div className="flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-full bg-primary/15 text-sm font-bold text-primary">
+            {avatar && (avatar.startsWith("http") || avatar.startsWith("data:")) ? (
+              <img src={avatar} alt={avatarName ?? ""} className="h-full w-full object-cover" />
+            ) : (
+              avatar
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
+/** Option A — enhanced card with gold top accent bar + larger number */
+const StatCardEnhanced = ({
+  label,
+  value,
+  avatar,
+  avatarName,
+  icon: Icon,
+}: {
+  label?: string;
+  value: string;
+  avatar?: string;
+  avatarName?: string;
+  icon?: React.ComponentType<{ className?: string }>;
+}) => {
+  return (
+    <div className="rounded-xl border border-border/60 border-l-[3px] border-l-primary bg-card px-4 pb-4 pt-3.5 shadow-sm transition-all duration-200 hover:shadow-md hover:-translate-y-0.5">
+      {/* icon + label row */}
+      <div className="flex items-center gap-1.5 mb-3">
+        {Icon && <Icon className="h-3 w-3 shrink-0 text-primary/60" strokeWidth={2.5} />}
+        <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-muted-foreground leading-none">{label}</p>
+      </div>
+      {/* value + optional avatar */}
+      <div className="flex items-end justify-between gap-2">
+        <p className="font-mono-tabular text-2xl font-bold leading-none text-primary sm:text-3xl">{value}</p>
+        {avatar && (
+          <div className="flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-full bg-primary/15 text-sm font-bold text-primary mb-0.5">
+            {avatar.startsWith("http") || avatar.startsWith("data:") ? (
+              <img src={avatar} alt={avatarName ?? ""} className="h-full w-full object-cover" />
+            ) : avatar}
           </div>
         )}
       </div>

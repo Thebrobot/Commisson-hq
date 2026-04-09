@@ -92,10 +92,10 @@ const DashboardHeader = () => {
                 <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary text-sm font-bold text-primary-foreground">HQ</div>
               )}
               <div className="min-w-0 flex-1">
-                <p className="text-[10px] font-medium uppercase tracking-wider text-slate-500 dark:text-muted-foreground">Viewing</p>
+                <p className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">Viewing</p>
                 <p className="truncate text-sm font-semibold text-foreground">{selectedLabel}</p>
               </div>
-              <ChevronDown className="h-4 w-4 shrink-0 text-slate-500 dark:text-muted-foreground" />
+              <ChevronDown className="h-4 w-4 shrink-0 text-muted-foreground" />
             </button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-[17rem] rounded-xl border-border bg-card/95 p-2 text-foreground backdrop-blur-xl">
@@ -145,7 +145,7 @@ const DashboardHeader = () => {
                     `rounded-lg px-3 py-2.5 text-center text-sm font-semibold snap-transition ${
                       isActive
                         ? "border border-primary/25 bg-primary/10 text-primary"
-                        : "text-slate-600 hover:bg-secondary/60 hover:text-foreground dark:text-muted-foreground dark:hover:bg-secondary/50 dark:hover:text-foreground"
+                        : "text-muted-foreground hover:bg-secondary/60 hover:text-foreground dark:hover:bg-secondary/50"
                     }`
                   }
                 >
@@ -271,10 +271,10 @@ const DashboardHeader = () => {
               </div>
             )}
             <div className="min-w-0 flex-1">
-              <p className="text-[10px] font-medium uppercase tracking-wider text-slate-500 dark:text-muted-foreground">Viewing</p>
+              <p className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">Viewing</p>
               <p className="truncate text-sm font-semibold text-foreground">{selectedLabel}</p>
             </div>
-            <ChevronDown className="h-4 w-4 shrink-0 text-slate-500 dark:text-muted-foreground" />
+            <ChevronDown className="h-4 w-4 shrink-0 text-muted-foreground" />
           </button>
         </DropdownMenuTrigger>
 

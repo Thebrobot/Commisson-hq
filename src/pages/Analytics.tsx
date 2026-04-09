@@ -188,8 +188,11 @@ export default function Analytics() {
           <BarChart2 className="h-5 w-5 text-primary" strokeWidth={2.5} />
         </div>
         <div>
-          <h2 className="text-xl font-bold tracking-tight text-foreground">Analytics</h2>
-          <p className="text-sm text-muted-foreground">Team performance, MRR, product mix, and payout pipeline</p>
+          <h1 className="text-3xl sm:text-4xl leading-none">
+            <span className="dashboard-title-primary">TEAM </span>
+            <span className="dashboard-title-accent">ANALYTICS</span>
+          </h1>
+          <div className="mt-2 h-0.5 w-10 rounded-full bg-primary" />
         </div>
       </div>
 

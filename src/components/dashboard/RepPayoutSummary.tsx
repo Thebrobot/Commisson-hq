@@ -23,16 +23,17 @@ const RepPayoutSummary = () => {
       initial={reduceMotion ? false : { opacity: 0, y: 20 }}
       animate={reduceMotion ? undefined : { opacity: 1, y: 0 }}
       transition={{ duration: 0.5, ease: [0.2, 0.8, 0.2, 1] }}
-      className="flex h-full flex-col rounded-2xl border border-primary/20 bg-card p-5 md:p-6"
+      className="flex h-full flex-col rounded-2xl border border-border bg-card p-5 md:p-6 shadow-sm"
     >
       <div className="flex flex-1 flex-col justify-between gap-4 min-h-0">
+        {/* Hero number */}
         <div className="grid grid-cols-[minmax(0,1fr)_auto] gap-3 md:gap-5 items-end">
           <div className="min-w-0">
-            <div className="mb-2 flex gap-2">
-              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-primary/25 bg-primary/12">
-                <Wallet className="h-4 w-4 text-primary" />
+            <div className="mb-2 flex items-center gap-2">
+              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
+                <Wallet className="h-4 w-4" strokeWidth={2.5} />
               </div>
-              <span className="text-xs font-medium uppercase tracking-[0.2em] text-primary">
+              <span className="text-xs font-medium uppercase tracking-[0.2em] text-muted-foreground">
                 Commission this month
               </span>
             </div>
@@ -65,67 +66,54 @@ const RepPayoutSummary = () => {
           )}
         </div>
 
+        {/* Chart */}
         <div className="min-h-0 flex-shrink-0">
           <MonthlyProductChart deals={selectedSummary?.deals ?? []} />
         </div>
 
+        {/* Stat tiles — unified style, no mixed colors */}
         <div className="grid gap-3 sm:grid-cols-3 sm:gap-4">
-          <motion.div
-            initial={reduceMotion ? false : { opacity: 0, y: 8 }}
-            animate={reduceMotion ? undefined : { opacity: 1, y: 0 }}
-            transition={{ delay: 0.2, duration: 0.4 }}
-            className="flex items-center gap-4 rounded-xl border border-border border-l-4 border-l-primary/60 bg-primary/5 p-4 shadow-sm dark:bg-primary/10"
-          >
-            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary/15 text-primary dark:bg-primary/20">
-              <CalendarClock className="h-4 w-4" strokeWidth={2.5} />
-            </div>
-            <div className="min-w-0 flex-1">
-              <p className="text-[11px] font-medium uppercase tracking-[0.2em] text-muted-foreground">
-                Next payout
-              </p>
-              <p className="mt-1 font-mono-tabular text-base font-semibold tracking-tight text-foreground sm:text-lg">
-                {nextPayoutDate ? longDateFormat.format(nextPayoutDate) : "Pending"}
-              </p>
-            </div>
-          </motion.div>
-
-          <motion.div
-            initial={reduceMotion ? false : { opacity: 0, y: 8 }}
-            animate={reduceMotion ? undefined : { opacity: 1, y: 0 }}
-            transition={{ delay: 0.26, duration: 0.4 }}
-            className="flex items-center gap-4 rounded-xl border border-border border-l-4 border-l-accent/60 bg-accent/5 p-4 shadow-sm dark:bg-accent/10"
-          >
-            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-accent/15 text-accent dark:bg-accent/20">
-              <Clock3 className="h-4 w-4" strokeWidth={2.5} />
-            </div>
-            <div className="min-w-0 flex-1">
-              <p className="text-[11px] font-medium uppercase tracking-[0.2em] text-muted-foreground">
-                Pending commission
-              </p>
-              <p className="mt-1 font-mono-tabular text-base font-semibold tracking-tight text-foreground sm:text-lg">
-                {currency.format(pendingCommission)}
-              </p>
-            </div>
-          </motion.div>
-
-          <motion.div
-            initial={reduceMotion ? false : { opacity: 0, y: 8 }}
-            animate={reduceMotion ? undefined : { opacity: 1, y: 0 }}
-            transition={{ delay: 0.32, duration: 0.4 }}
-            className="flex items-center gap-4 rounded-xl border border-border border-l-4 border-l-blue-500/60 bg-blue-500/5 p-4 shadow-sm dark:bg-blue-500/10"
-          >
-            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-blue-500/15 text-blue-600 dark:text-blue-400">
-              <Wallet className="h-4 w-4" strokeWidth={2.5} />
-            </div>
-            <div className="min-w-0 flex-1">
-              <p className="text-[11px] font-medium uppercase tracking-[0.2em] text-muted-foreground">
-                Ready to pay
-              </p>
-              <p className="mt-1 font-mono-tabular text-base font-semibold tracking-tight text-foreground sm:text-lg">
-                {currency.format(availableCommission)}
-              </p>
-            </div>
-          </motion.div>
+          {[
+            {
+              icon: CalendarClock,
+              label: "Next payout",
+              value: nextPayoutDate ? longDateFormat.format(nextPayoutDate) : "Pending",
+              delay: 0.2,
+            },
+            {
+              icon: Clock3,
+              label: "Pending commission",
+              value: currency.format(pendingCommission),
+              delay: 0.26,
+            },
+            {
+              icon: Wallet,
+              label: "Ready to pay",
+              value: currency.format(availableCommission),
+              delay: 0.32,
+              highlight: availableCommission > 0,
+            },
+          ].map((tile) => (
+            <motion.div
+              key={tile.label}
+              initial={reduceMotion ? false : { opacity: 0, y: 8 }}
+              animate={reduceMotion ? undefined : { opacity: 1, y: 0 }}
+              transition={{ delay: tile.delay, duration: 0.4 }}
+              className={`stat-card ${tile.highlight ? "border-primary/30 bg-primary/5 dark:bg-primary/10" : ""}`}
+            >
+              <div className="stat-card-icon">
+                <tile.icon className="h-4 w-4" strokeWidth={2.5} />
+              </div>
+              <div className="min-w-0 flex-1">
+                <p className="text-[11px] font-medium uppercase tracking-[0.2em] text-muted-foreground">
+                  {tile.label}
+                </p>
+                <p className={`mt-1 font-mono-tabular text-base font-semibold tracking-tight sm:text-lg ${tile.highlight ? "text-primary" : "text-foreground"}`}>
+                  {tile.value}
+                </p>
+              </div>
+            </motion.div>
+          ))}
         </div>
       </div>
     </motion.div>

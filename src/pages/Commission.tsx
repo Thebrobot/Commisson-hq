@@ -21,12 +21,14 @@ const Commission = () => {
           animate={{ opacity: 1, y: 0 }}
           className="max-w-2xl"
         >
-          <p className="text-sm font-medium uppercase tracking-[0.24em] text-primary">
-            Commission simulator
+          <h1 className="text-3xl sm:text-4xl leading-none">
+            <span className="dashboard-title-primary">EARNINGS </span>
+            <span className="dashboard-title-accent">LAB</span>
+          </h1>
+          <div className="mt-2 mb-1 h-0.5 w-10 rounded-full bg-primary" />
+          <p className="mt-2 text-sm font-medium uppercase tracking-[0.24em] text-muted-foreground">
+            Model a deal — see your payout
           </p>
-          <h2 className="mt-1 text-3xl font-bold tracking-tight text-foreground">
-            Model a deal
-          </h2>
           <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
             Select a rep to see how a deal affects their commission, residual tier, and payout timing.
           </p>
