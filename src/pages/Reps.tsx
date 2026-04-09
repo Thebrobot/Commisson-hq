@@ -163,9 +163,7 @@ export default function Reps() {
         toast.error(inviteNote ?? "Could not add sales partner");
         return;
       }
-      toast.success(
-        `${addPartnerState.name.trim()} added as a sales partner (no login invite). Assign deals to them in the client editor or when creating deals.`,
-      );
+      toast.success(`${addPartnerState.name.trim()} added as sales partner.`);
       setAddPartnerState(null);
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Failed to add sales partner");
@@ -532,12 +530,6 @@ export default function Reps() {
           </DialogHeader>
           {addPartnerState && (
             <div className="space-y-4 py-2">
-              <p className="text-sm text-muted-foreground">
-                Adds them to the team as a <span className="font-medium text-foreground">sales partner</span> so you
-                can attribute deals and MRR. <span className="font-medium text-foreground">No login email is sent.</span>{" "}
-                Each deal is stored with that partner&apos;s row <span className="font-medium text-foreground">ID</span>{" "}
-                in the database (email is only for your records and future linking if they ever sign up).
-              </p>
               <div className="space-y-2">
                 <Label htmlFor="partner-name">Name</Label>
                 <Input
@@ -548,7 +540,7 @@ export default function Reps() {
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="partner-email">Email (webhook matching — not for login)</Label>
+                <Label htmlFor="partner-email">Email</Label>
                 <Input
                   id="partner-email"
                   type="email"
@@ -557,9 +549,6 @@ export default function Reps() {
                   placeholder="contact@partner.com"
                   autoComplete="off"
                 />
-                <p className="text-xs text-muted-foreground">
-                  This address must match what GoHighLevel sends as the rep email. We do not email this person from Commission HQ.
-                </p>
               </div>
             </div>
           )}
