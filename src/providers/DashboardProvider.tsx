@@ -391,10 +391,30 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
       if (!tenantId) {
         return { rep: null, inviteSent: false, inviteNote: "No tenant loaded." };
       }
+      const normalizedEmail = data.email.trim().toLowerCase();
+      const { data: existingByEmail } = await supabase
+        .from("reps")
+        .select("id, name, role")
+        .eq("tenant_id", tenantId)
+        .eq("email", normalizedEmail)
+        .maybeSingle();
+
+      if (existingByEmail) {
+        const roleLabel =
+          existingByEmail.role === "partner"
+            ? "sales partner"
+            : existingByEmail.role === "manager"
+              ? "manager"
+              : "rep";
+        throw new Error(
+          `${existingByEmail.name} (${normalizedEmail}) is already on the team as a ${roleLabel}. Use Edit on their card to change role or details — emails must be unique.`,
+        );
+      }
+
       const row = {
         tenant_id: tenantId,
         name: data.name.trim(),
-        email: data.email.trim().toLowerCase(),
+        email: normalizedEmail,
         role: data.role,
         avatar: "",
       };
@@ -405,6 +425,11 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
         .single();
       if (error) {
         console.error("[addRep]", error);
+        if (error.code === "23505" || /reps_email_key|unique constraint.*email/i.test(error.message ?? "")) {
+          throw new Error(
+            "That email is already used by someone on your team. Find them in the list, click Edit, and set role to Sales partner instead of adding a duplicate.",
+          );
+        }
         throw new Error(error.message || "Failed to add rep");
       }
       const newRep: RepWithTenant = {
