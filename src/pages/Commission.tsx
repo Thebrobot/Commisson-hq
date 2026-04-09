@@ -1,17 +1,51 @@
 import { motion } from "framer-motion";
 import { User } from "lucide-react";
+import { Navigate } from "react-router-dom";
 import ResidualTiers from "@/components/commission/ResidualTiers";
 import ProductCommissionGrid from "@/components/commission/ProductCommissionGrid";
 import NonCommissionable from "@/components/commission/NonCommissionable";
 import InteractiveCalc from "@/components/commission/InteractiveCalc";
 import RepAvatar from "@/components/dashboard/RepAvatar";
+import { Button } from "@/components/ui/button";
 import { useDashboard } from "@/providers/DashboardProvider";
 
 const Commission = () => {
-  const { isManagerView, reps, selectedRep, selectedSummary, team, setSelectedRepId } =
-    useDashboard();
+  const {
+    isManagerView,
+    reps,
+    selectedRep,
+    selectedSummary,
+    team,
+    setSelectedRepId,
+    hideCommissionUI,
+    isPortalManager,
+    myRepId,
+  } = useDashboard();
   const currentMrr = isManagerView ? team.teamMrr : selectedSummary?.totalMrr ?? 0;
   const currentTier = isManagerView ? "Team view" : selectedSummary?.tier.label ?? "Launch";
+
+  if (hideCommissionUI) {
+    return <Navigate to="/" replace />;
+  }
+
+  if (isManagerView && !isPortalManager) {
+    return (
+      <div className="mx-auto max-w-lg space-y-4 py-12 text-center">
+        <h1 className="text-2xl font-bold text-foreground">Earnings Lab</h1>
+        <p className="text-sm text-muted-foreground">
+          Commission tools are available for your own book. Switch from Team board to your name in the
+          header, or open your view directly below.
+        </p>
+        {myRepId ? (
+          <Button className="mt-2" onClick={() => setSelectedRepId(myRepId)}>
+            Open my Earnings Lab
+          </Button>
+        ) : (
+          <p className="text-xs text-muted-foreground">Link your account to a rep profile to continue.</p>
+        )}
+      </div>
+    );
+  }
 
   if (isManagerView) {
     return (

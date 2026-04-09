@@ -21,12 +21,19 @@ import {
 
 interface ClientCardProps {
   item: DealFeedItem;
+  hideCommissionUI?: boolean;
   onClick: () => void;
   onHandoffClick: (e: React.MouseEvent) => void;
   onPaidChange: (paid: boolean) => void;
 }
 
-export default function ClientCard({ item, onClick, onHandoffClick, onPaidChange }: ClientCardProps) {
+export default function ClientCard({
+  item,
+  hideCommissionUI = false,
+  onClick,
+  onHandoffClick,
+  onPaidChange,
+}: ClientCardProps) {
   const productNames = item.deal.products
     .map((li) => getProductById(li.productId)?.name ?? li.productId)
     .join(", ");
@@ -89,48 +96,56 @@ export default function ClientCard({ item, onClick, onHandoffClick, onPaidChange
           </p>
           <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
             <span>{formatRelativeDealDate(item.deal.closeDate)}</span>
-            <span>Payout {longDateFormat.format(item.summary.payoutDate)}</span>
+            {!hideCommissionUI && (
+              <span>Payout {longDateFormat.format(item.summary.payoutDate)}</span>
+            )}
             <span className="font-mono-tabular">{currency.format(mrr)} MRR</span>
           </div>
           <div className="mt-3 flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
-            <p className="font-mono-tabular text-lg font-bold text-primary">
-              {currency.format(item.summary.totalCommission)}
-            </p>
+            {!hideCommissionUI && (
+              <p className="font-mono-tabular text-lg font-bold text-primary">
+                {currency.format(item.summary.totalCommission)}
+              </p>
+            )}
             <div className="flex items-center gap-2">
-              <span className="text-xs text-muted-foreground">
-                {(() => {
-                  const status = getCommissionStatus(item.deal, item.summary);
-                  if (status === "paid") return "Paid";
-                  if (status === "cancelled") return "—";
-                  if (status === "trial")
+              {!hideCommissionUI && (
+                <span className="text-xs text-muted-foreground">
+                  {(() => {
+                    const status = getCommissionStatus(item.deal, item.summary);
+                    if (status === "paid") return "Paid";
+                    if (status === "cancelled") return "—";
+                    if (status === "trial")
+                      return (
+                        <span className="text-amber-600 dark:text-amber-500">
+                          Trial
+                          {item.deal.firstPaymentDate &&
+                            ` — ${shortDate.format(new Date(`${item.deal.firstPaymentDate}T12:00:00`))}`}
+                        </span>
+                      );
+                    if (status === "ready") return <span className="font-medium text-primary">Ready</span>;
                     return (
-                      <span className="text-amber-600 dark:text-amber-500">
-                        Trial
-                        {item.deal.firstPaymentDate &&
-                          ` — ${shortDate.format(new Date(`${item.deal.firstPaymentDate}T12:00:00`))}`}
+                      <span>
+                        In lag — {shortDate.format(item.summary.availableAt)}
                       </span>
                     );
-                  if (status === "ready") return <span className="font-medium text-primary">Ready</span>;
-                  return (
-                    <span>
-                      In lag — {shortDate.format(item.summary.availableAt)}
-                    </span>
-                  );
-                })()}
-              </span>
-              <Select
-                value={item.deal.paidOut ? "paid" : "unpaid"}
-                onValueChange={(value) => onPaidChange(value === "paid")}
-                onClick={(e) => e.stopPropagation()}
-              >
-                <SelectTrigger className="h-8 w-[5.5rem]" onClick={(e) => e.stopPropagation()}>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="unpaid">Unpaid</SelectItem>
-                  <SelectItem value="paid">Paid</SelectItem>
-                </SelectContent>
-              </Select>
+                  })()}
+                </span>
+              )}
+              {!hideCommissionUI && (
+                <Select
+                  value={item.deal.paidOut ? "paid" : "unpaid"}
+                  onValueChange={(value) => onPaidChange(value === "paid")}
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <SelectTrigger className="h-8 w-[5.5rem]" onClick={(e) => e.stopPropagation()}>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="unpaid">Unpaid</SelectItem>
+                    <SelectItem value="paid">Paid</SelectItem>
+                  </SelectContent>
+                </Select>
+              )}
             </div>
           </div>
         </div>

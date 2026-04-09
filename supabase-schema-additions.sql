@@ -1,5 +1,7 @@
 -- Commission HQ Schema Additions
 -- Run this in the Supabase SQL Editor to enable new features.
+--
+-- Sales partner role: after base schema, run supabase-reps-role-partner.sql so reps.role can be 'partner'.
 
 -- 1. Add internal notes field to deals (for rep notes per client)
 ALTER TABLE deals ADD COLUMN IF NOT EXISTS notes TEXT;

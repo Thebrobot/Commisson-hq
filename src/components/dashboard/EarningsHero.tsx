@@ -1,6 +1,15 @@
 import type { ReactNode } from "react";
 import { motion, useReducedMotion } from "framer-motion";
-import { ArrowUpRight, CalendarClock, Clock3, Crown, Sparkles, Target, TrendingUp, Wallet, Zap } from "lucide-react";
+import {
+  ArrowUpRight,
+  CalendarCheck,
+  CalendarClock,
+  Clock3,
+  Crown,
+  TrendingUp,
+  UserCheck,
+  Wallet,
+} from "lucide-react";
 import { payoutConfig } from "@/data/catalog/commission";
 import type { TierConfig } from "@/types/commission";
 import {
@@ -15,10 +24,11 @@ import RepPayoutSummary from "@/components/dashboard/RepPayoutSummary";
 import TeamContext from "@/components/dashboard/TeamContext";
 import MonthlyProductChart from "@/components/dashboard/MonthlyProductChart";
 import Rolling90DayChart from "@/components/dashboard/Rolling90DayChart";
+import type { RepAggregate, TeamAggregate } from "@/types/commission";
 
 const EarningsHero = () => {
   const reduceMotion = useReducedMotion();
-  const { isManagerView, selectedSummary, selectedRep, team, deals } = useDashboard();
+  const { isManagerView, selectedSummary, selectedRep, team, deals, hideCommissionUI } = useDashboard();
   const target = payoutConfig.monthlyGoal;
   const currentValue = isManagerView
     ? team.totalAvailableCommission
@@ -55,7 +65,26 @@ const EarningsHero = () => {
   };
 
   if (isManagerView) {
+    if (hideCommissionUI) {
+      return <PartnerTeamBookBoard team={team} deals={deals} reduceMotion={reduceMotion} />;
+    }
     return <ManagerSpotlightBoard {...managerBoardProps} />;
+  }
+
+  if (hideCommissionUI) {
+    return (
+      <>
+        <div className="mb-3 sm:mb-4 grid grid-cols-1 gap-4 items-stretch lg:grid-cols-[minmax(0,1fr)_minmax(18rem,28rem)]">
+          <PartnerRepBookCard selectedSummary={selectedSummary} reduceMotion={reduceMotion} />
+          <div className="lg:col-span-2">
+            <TeamContext />
+          </div>
+        </div>
+        <div className="mt-0">
+          <DealFeed />
+        </div>
+      </>
+    );
   }
 
   const repDeals = deals.filter((d) => selectedRep && d.repId === selectedRep.id);
@@ -105,6 +134,108 @@ const EarningsHero = () => {
 };
 
 export default EarningsHero;
+
+/** Team board for sales partners: MRR and pipeline only (no payout dollars). */
+function PartnerTeamBookBoard({
+  team,
+  deals,
+  reduceMotion,
+}: {
+  team: TeamAggregate;
+  deals: import("@/types/commission").Deal[];
+  reduceMotion: boolean | null;
+}) {
+  return (
+    <motion.div
+      initial={reduceMotion ? false : { opacity: 0, y: 20 }}
+      animate={reduceMotion ? undefined : { opacity: 1, y: 0 }}
+      transition={{ duration: 0.5, ease: [0.2, 0.8, 0.2, 1] }}
+      className="rounded-2xl border border-primary/20 bg-card p-5"
+    >
+      <div className="flex flex-col gap-5">
+        <div className="min-w-0">
+          <div className="mb-2 flex gap-1.5">
+            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-primary/25 bg-primary/12">
+              <TrendingUp className="h-4 w-4 text-primary" />
+            </div>
+            <span className="text-xs font-medium uppercase tracking-[0.2em] text-primary">Team book</span>
+          </div>
+          <p className="font-mono-tabular text-4xl font-bold tracking-tight md:text-5xl xl:text-6xl text-foreground">
+            {currency.format(team.teamMrr)}
+          </p>
+          <p className="mt-1 text-sm text-muted-foreground">Total MRR across everyone on the board</p>
+        </div>
+
+        <div className="min-h-0 flex-shrink-0">
+          <MonthlyProductChart deals={deals} monthLabel="Team sales this month" />
+        </div>
+
+        <div className="grid gap-3 sm:grid-cols-3">
+          {[
+            { label: "MRR", value: currency.format(team.teamMrr), icon: TrendingUp },
+            {
+              label: "Paying clients",
+              value: String(team.activeClientCount),
+              icon: UserCheck,
+            },
+            {
+              label: "Closed this month",
+              value: String(team.closedThisMonthCount),
+              icon: CalendarCheck,
+            },
+          ].map((card, i) => (
+            <motion.div
+              key={card.label}
+              initial={reduceMotion ? false : { opacity: 0, y: 8 }}
+              animate={reduceMotion ? undefined : { opacity: 1, y: 0 }}
+              transition={{ delay: 0.25 + i * 0.06, duration: 0.4 }}
+            >
+              <StatCardEnhanced {...card} />
+            </motion.div>
+          ))}
+        </div>
+      </div>
+    </motion.div>
+  );
+}
+
+function PartnerRepBookCard({
+  selectedSummary,
+  reduceMotion,
+}: {
+  selectedSummary: RepAggregate | null;
+  reduceMotion: boolean | null;
+}) {
+  const totalMrr = selectedSummary?.totalMrr ?? 0;
+  const clients = selectedSummary?.payingClientCount ?? 0;
+  const closed = selectedSummary?.closedThisMonthCount ?? 0;
+
+  return (
+    <motion.div
+      initial={reduceMotion ? false : { opacity: 0, y: 20 }}
+      animate={reduceMotion ? undefined : { opacity: 1, y: 0 }}
+      transition={{ duration: 0.5, ease: [0.2, 0.8, 0.2, 1] }}
+      className="obsidian-card relative flex flex-col justify-center overflow-hidden border-t-2 border-t-primary/30 p-5"
+    >
+      <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-primary/5 to-transparent" />
+      <div className="relative z-10">
+        <p className="text-xs font-bold uppercase tracking-[0.2em] text-foreground mb-3">Your book</p>
+        <p className="font-mono-tabular text-4xl font-bold tracking-tight text-foreground md:text-5xl">
+          {currency.format(totalMrr)}
+        </p>
+        <p className="mt-1 text-sm text-muted-foreground">Current MRR</p>
+        <div className="mt-4 flex flex-wrap gap-4 text-sm">
+          <span className="text-muted-foreground">
+            <span className="font-semibold text-foreground">{clients}</span> paying clients
+          </span>
+          <span className="text-muted-foreground">
+            <span className="font-semibold text-foreground">{closed}</span> closed this month
+          </span>
+        </div>
+      </div>
+    </motion.div>
+  );
+}
 
 function ResidualCircleCard({
   residualMonthly,

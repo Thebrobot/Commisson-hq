@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { motion, useReducedMotion } from "framer-motion";
-import { Plus, Shield, ShieldCheck, Users } from "lucide-react";
+import { Handshake, Plus, Shield, ShieldCheck, Users } from "lucide-react";
 import { currency } from "@/lib/commission";
 import { useDashboard } from "@/providers/DashboardProvider";
 import { Button } from "@/components/ui/button";
@@ -28,18 +28,18 @@ interface EditRepState {
   name: string;
   email: string;
   avatar: string;
-  role: "rep" | "manager";
+  role: "rep" | "manager" | "partner";
 }
 
 interface AddRepState {
   name: string;
   email: string;
-  role: "rep" | "manager";
+  role: "rep" | "manager" | "partner";
 }
 
 export default function Reps() {
   const reduceMotion = useReducedMotion();
-  const { reps, team, updateRepProfile, addRep, isManagerView } = useDashboard();
+  const { reps, team, updateRepProfile, addRep, isPortalManager } = useDashboard();
   const [editState, setEditState] = useState<EditRepState | null>(null);
   const [addState, setAddState] = useState<AddRepState | null>(null);
   const [saving, setSaving] = useState(false);
@@ -50,12 +50,23 @@ export default function Reps() {
         mrr: r.totalMrr,
         clients: r.payingClientCount,
         thisMonthCommission: r.thisMonthCommission,
+        closedThisMonth: r.closedThisMonthCount,
         tier: r.tier.label,
         cancelledCount: r.cancelledCount,
       };
       return acc;
     },
-    {} as Record<string, { mrr: number; clients: number; thisMonthCommission: number; tier: string; cancelledCount: number }>,
+    {} as Record<
+      string,
+      {
+        mrr: number;
+        clients: number;
+        thisMonthCommission: number;
+        closedThisMonth: number;
+        tier: string;
+        cancelledCount: number;
+      }
+    >,
   );
 
   const openEdit = (rep: Rep) => {
@@ -105,13 +116,13 @@ export default function Reps() {
     }
   };
 
-  if (!isManagerView) {
+  if (!isPortalManager) {
     return (
       <div className="flex flex-col items-center justify-center py-20 gap-4 text-center">
         <Shield className="h-12 w-12 text-muted-foreground" />
         <h2 className="text-lg font-semibold text-foreground">Manager access required</h2>
         <p className="text-sm text-muted-foreground max-w-sm">
-          Switch to Team Board view to manage reps.
+          Only managers can add or edit team members and roles.
         </p>
       </div>
     );
@@ -153,6 +164,7 @@ export default function Reps() {
         {reps.map((rep) => {
           const stats = repStats[rep.id];
           const isManager = rep.role === "manager";
+          const isPartner = rep.role === "partner";
           return (
             <motion.div
               key={rep.id}
@@ -173,9 +185,23 @@ export default function Reps() {
                   <p className="font-semibold text-foreground truncate">{rep.name}</p>
                   <p className="text-xs text-muted-foreground truncate">{rep.email}</p>
                 </div>
-                <span className={`flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-semibold shrink-0 ${isManager ? "bg-amber-500/15 text-amber-600 dark:text-amber-400" : "bg-primary/10 text-primary"}`}>
-                  {isManager ? <ShieldCheck className="h-3 w-3" /> : <Shield className="h-3 w-3" />}
-                  {isManager ? "Manager" : "Rep"}
+                <span
+                  className={`flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-semibold shrink-0 ${
+                    isManager
+                      ? "bg-amber-500/15 text-amber-600 dark:text-amber-400"
+                      : isPartner
+                        ? "bg-cyan-500/15 text-cyan-700 dark:text-cyan-400"
+                        : "bg-primary/10 text-primary"
+                  }`}
+                >
+                  {isManager ? (
+                    <ShieldCheck className="h-3 w-3" />
+                  ) : isPartner ? (
+                    <Handshake className="h-3 w-3" />
+                  ) : (
+                    <Shield className="h-3 w-3" />
+                  )}
+                  {isManager ? "Manager" : isPartner ? "Sales partner" : "Rep"}
                 </span>
               </div>
 
@@ -187,16 +213,24 @@ export default function Reps() {
                     <p className="font-mono-tabular text-sm font-bold text-foreground mt-0.5">{currency.format(stats.mrr)}</p>
                   </div>
                   <div className="rounded-lg bg-muted/40 p-2.5">
-                    <p className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">This Month</p>
-                    <p className="font-mono-tabular text-sm font-bold text-primary mt-0.5">{currency.format(stats.thisMonthCommission)}</p>
+                    <p className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
+                      {isPartner ? "Closed (mo)" : "This Month"}
+                    </p>
+                    <p className="font-mono-tabular text-sm font-bold text-primary mt-0.5">
+                      {isPartner ? stats.closedThisMonth : currency.format(stats.thisMonthCommission)}
+                    </p>
                   </div>
                   <div className="rounded-lg bg-muted/40 p-2.5">
                     <p className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">Active Clients</p>
                     <p className="text-sm font-bold text-foreground mt-0.5">{stats.clients}</p>
                   </div>
                   <div className="rounded-lg bg-muted/40 p-2.5">
-                    <p className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">Tier</p>
-                    <p className="text-sm font-bold text-foreground mt-0.5">{stats.tier}</p>
+                    <p className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
+                      {isPartner ? "Book" : "Tier"}
+                    </p>
+                    <p className="text-sm font-bold text-foreground mt-0.5">
+                      {isPartner ? "MRR only" : stats.tier}
+                    </p>
                   </div>
                 </div>
               ) : (
@@ -270,13 +304,14 @@ export default function Reps() {
                 <Label>Role</Label>
                 <Select
                   value={editState.role}
-                  onValueChange={(v) => setEditState((s) => s && ({ ...s, role: v as "rep" | "manager" }))}
+                  onValueChange={(v) => setEditState((s) => s && ({ ...s, role: v as "rep" | "manager" | "partner" }))}
                 >
                   <SelectTrigger>
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="rep">Rep</SelectItem>
+                    <SelectItem value="partner">Sales partner</SelectItem>
                     <SelectItem value="manager">Manager</SelectItem>
                   </SelectContent>
                 </Select>
@@ -326,13 +361,14 @@ export default function Reps() {
                 <Label>Role</Label>
                 <Select
                   value={addState.role}
-                  onValueChange={(v) => setAddState((s) => s && ({ ...s, role: v as "rep" | "manager" }))}
+                  onValueChange={(v) => setAddState((s) => s && ({ ...s, role: v as "rep" | "manager" | "partner" }))}
                 >
                   <SelectTrigger>
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="rep">Rep</SelectItem>
+                    <SelectItem value="partner">Sales partner</SelectItem>
                     <SelectItem value="manager">Manager</SelectItem>
                   </SelectContent>
                 </Select>

@@ -29,7 +29,7 @@ interface SettingsSheetProps {
 }
 
 const SettingsSheet = ({ open, onOpenChange }: SettingsSheetProps) => {
-  const { reps, selectedRepId, updateRepProfile, myRepId } = useDashboard();
+  const { reps, selectedRepId, updateRepProfile, myRepId, isPortalManager } = useDashboard();
   const { signOut, user } = useAuth();
   const [editingRepId, setEditingRepId] = useState<string>("");
   const rep = reps.find((r) => r.id === editingRepId);
@@ -41,17 +41,23 @@ const SettingsSheet = ({ open, onOpenChange }: SettingsSheetProps) => {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [avatar, setAvatar] = useState("");
-  const [role, setRole] = useState<"rep" | "manager">("rep");
+  const [role, setRole] = useState<"rep" | "manager" | "partner">("rep");
 
-  // When opening or when scope changes: if viewing a specific rep, edit that rep; otherwise default to first
+  const selectableReps = isPortalManager ? reps : reps.filter((r) => r.id === myRepId);
+
+  // When opening or when scope changes: managers pick from scope; others always edit their own row
   useEffect(() => {
     if (!open || reps.length === 0) return;
+    if (!isPortalManager && myRepId) {
+      setEditingRepId(myRepId);
+      return;
+    }
     const resolved =
       selectedRepId !== "all"
         ? selectedRepId
         : reps.find((r) => r.role === "manager")?.id ?? reps[0]?.id ?? "";
     setEditingRepId(resolved);
-  }, [open, selectedRepId, reps]);
+  }, [open, selectedRepId, reps, isPortalManager, myRepId]);
 
   useEffect(() => {
     if (rep) {
@@ -73,7 +79,7 @@ const SettingsSheet = ({ open, onOpenChange }: SettingsSheetProps) => {
     setSaveError(null);
     setSaving(true);
     try {
-      const updates: { name?: string; email?: string; avatar?: string; role?: "rep" | "manager" } = {
+      const updates: { name?: string; email?: string; avatar?: string; role?: "rep" | "manager" | "partner" } = {
         name: name.trim(),
         email: email.trim(),
         avatar: avatar.trim(),
@@ -127,7 +133,7 @@ const SettingsSheet = ({ open, onOpenChange }: SettingsSheetProps) => {
                 <SelectValue placeholder="Select who to edit" />
               </SelectTrigger>
               <SelectContent>
-                {reps.map((r) => (
+                {selectableReps.map((r) => (
                   <SelectItem key={r.id} value={r.id}>
                     <div className="flex items-center gap-2">
                       <RepAvatar avatar={r.avatar} name={r.name} className="h-6 w-6 text-xs" />
@@ -185,12 +191,13 @@ const SettingsSheet = ({ open, onOpenChange }: SettingsSheetProps) => {
             <Label>Role</Label>
             {canChangeRole ? (
               <>
-                <Select value={role} onValueChange={(v) => setRole(v as "rep" | "manager")}>
+                <Select value={role} onValueChange={(v) => setRole(v as "rep" | "manager" | "partner")}>
                   <SelectTrigger>
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="rep">Rep</SelectItem>
+                    <SelectItem value="partner">Sales partner</SelectItem>
                     <SelectItem value="manager">Manager</SelectItem>
                   </SelectContent>
                 </Select>
@@ -201,7 +208,7 @@ const SettingsSheet = ({ open, onOpenChange }: SettingsSheetProps) => {
             ) : (
               <>
                 <div className="rounded-md border bg-muted/50 px-3 py-2 text-sm capitalize">
-                  {rep.role}
+                  {rep.role === "partner" ? "Sales partner" : rep.role}
                 </div>
                 {isEditingSelf && rep.role === "manager" && (
                   <p className="text-xs text-muted-foreground">

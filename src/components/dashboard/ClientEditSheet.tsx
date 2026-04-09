@@ -39,6 +39,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { useDashboard } from "@/providers/DashboardProvider";
 
 interface ClientEditSheetProps {
   item: DealFeedItem | null;
@@ -59,6 +60,9 @@ const ClientEditSheet = ({
   onCancelDeal,
   onDelete,
 }: ClientEditSheetProps) => {
+  const { hideCommissionUI, isPortalManager, myRepId } = useDashboard();
+  const assignableReps =
+    isPortalManager || !myRepId ? reps : reps.filter((r) => r.id === myRepId);
   const [clientName, setClientName] = useState("");
   const [clientEmail, setClientEmail] = useState("");
   const [clientPhone, setClientPhone] = useState("");
@@ -397,7 +401,7 @@ const ClientEditSheet = ({
                   <SelectValue placeholder="Select rep" />
                 </SelectTrigger>
                 <SelectContent modal={false} position="popper" className="z-[100]">
-                  {reps.map((r) => (
+                  {assignableReps.map((r) => (
                     <SelectItem key={r.id} value={r.id}>
                       {r.name}
                     </SelectItem>
@@ -481,7 +485,7 @@ const ClientEditSheet = ({
                             <SelectItem key={p.id} value={p.id}>
                               {p.name} — book default {currency.format(p.commissionableMrr)}
                               {p.perUnit ? "/unit" : ""}
-                              {p.fixedUpfrontCommissionUsd != null
+                              {!hideCommissionUI && p.fixedUpfrontCommissionUsd != null
                                 ? ` · sale ${currency.format(p.fixedUpfrontCommissionUsd)}`
                                 : ""}
                             </SelectItem>
@@ -618,7 +622,7 @@ const ClientEditSheet = ({
                               {s.isVariable
                                 ? "variable"
                                 : currency.format(s.price)}
-                              {" "}({s.commissionRate * 100}% comm.)
+                              {!hideCommissionUI ? ` (${s.commissionRate * 100}% comm.)` : ""}
                             </SelectItem>
                           ))}
                         </SelectContent>
@@ -657,7 +661,7 @@ const ClientEditSheet = ({
                               : "0"
                           }
                         />
-                        {feeConfig && fee.actualAmount > 0 && (
+                        {feeConfig && fee.actualAmount > 0 && !hideCommissionUI && (
                           <p className="text-xs text-muted-foreground">
                             Commission:{" "}
                             {currency.format(
@@ -686,10 +690,10 @@ const ClientEditSheet = ({
             />
           </div>
 
-          {/* Live commission summary */}
+          {/* Book / commission summary */}
           <div className="space-y-3 rounded-lg border border-primary/20 bg-primary/5 p-4">
             <h4 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-              Commission summary
+              {hideCommissionUI ? "Book summary" : "Commission summary"}
             </h4>
             <div className="space-y-1.5">
               <div className="flex justify-between text-sm">
@@ -702,32 +706,37 @@ const ClientEditSheet = ({
                   {currency.format(mrr)}
                 </span>
               </div>
-              <div className="flex justify-between text-sm">
-                <span className="text-muted-foreground">Upfront</span>
-                <span className="font-mono-tabular">
-                  {currency.format(summary.upfrontCommission)}
-                </span>
-              </div>
-              <div className="flex justify-between text-sm">
-                <span className="text-muted-foreground">Setup</span>
-                <span className="font-mono-tabular">
-                  {currency.format(summary.setupCommission)}
-                </span>
-              </div>
-              <div className="flex justify-between border-t border-border pt-2 text-sm font-semibold">
-                <span>Total</span>
-                <span className="font-mono-tabular text-primary">
-                  {currency.format(summary.totalCommission)}
-                </span>
-              </div>
-              {repId && !isCancelled && (
-                <p className="text-xs font-medium text-primary">
-                  {currency.format(summary.totalCommission)} will be paid to {reps.find((r) => r.id === repId)?.name ?? "—"}
-                </p>
+              {!hideCommissionUI && (
+                <>
+                  <div className="flex justify-between text-sm">
+                    <span className="text-muted-foreground">Upfront</span>
+                    <span className="font-mono-tabular">
+                      {currency.format(summary.upfrontCommission)}
+                    </span>
+                  </div>
+                  <div className="flex justify-between text-sm">
+                    <span className="text-muted-foreground">Setup</span>
+                    <span className="font-mono-tabular">
+                      {currency.format(summary.setupCommission)}
+                    </span>
+                  </div>
+                  <div className="flex justify-between border-t border-border pt-2 text-sm font-semibold">
+                    <span>Total</span>
+                    <span className="font-mono-tabular text-primary">
+                      {currency.format(summary.totalCommission)}
+                    </span>
+                  </div>
+                  {repId && !isCancelled && (
+                    <p className="text-xs font-medium text-primary">
+                      {currency.format(summary.totalCommission)} will be paid to{" "}
+                      {reps.find((r) => r.id === repId)?.name ?? "—"}
+                    </p>
+                  )}
+                  <p className="text-xs text-muted-foreground">
+                    Payout: {longDateFormat.format(summary.payoutDate)}
+                  </p>
+                </>
               )}
-              <p className="text-xs text-muted-foreground">
-                Payout: {longDateFormat.format(summary.payoutDate)}
-              </p>
             </div>
           </div>
             </div>

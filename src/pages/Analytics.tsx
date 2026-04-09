@@ -41,7 +41,15 @@ function getMonthLabel(year: number, month: number) {
 
 export default function Analytics() {
   const reduceMotion = useReducedMotion();
-  const { deals, reps, team, isManagerView } = useDashboard();
+  const { deals, reps, team, isPortalManager, hideCommissionUI, myRepId } = useDashboard();
+
+  const analyticsDeals = useMemo(() => {
+    if (isPortalManager) return deals;
+    if (myRepId == null) return deals;
+    return deals.filter((d) => d.repId === myRepId);
+  }, [deals, isPortalManager, myRepId]);
+
+  const showOrgCommission = isPortalManager && !hideCommissionUI;
 
   // --- MRR Waterfall: last 6 months ---
   const mrrWaterfall = useMemo(() => {
@@ -52,7 +60,7 @@ export default function Analytics() {
       months.push({ year: d.getFullYear(), month: d.getMonth() });
     }
     return months.map((m) => {
-      const monthDeals = deals.filter((d) => {
+      const monthDeals = analyticsDeals.filter((d) => {
         const [y, mo] = d.closeDate.split("-").map(Number);
         return y === m.year && mo === m.month + 1;
       });
@@ -69,12 +77,12 @@ export default function Analytics() {
         net: Math.round(newMrr - churnedMrr),
       };
     });
-  }, [deals]);
+  }, [analyticsDeals]);
 
   // --- Product Mix ---
   const productMix = useMemo(() => {
     const byProduct: Record<string, number> = {};
-    deals
+    analyticsDeals
       .filter((d) => d.status === "active")
       .forEach((deal) => {
         deal.products.forEach((li) => {
@@ -90,7 +98,7 @@ export default function Analytics() {
         id,
       }))
       .sort((a, b) => b.mrr - a.mrr);
-  }, [deals]);
+  }, [analyticsDeals]);
 
   // --- Commission Liability (what's owed to reps) ---
   const liabilityByRep = useMemo(() => {
@@ -113,7 +121,7 @@ export default function Analytics() {
   const upcomingPayouts = useMemo(() => {
     const now = new Date();
     const entries: { repName: string; clientName: string; payoutDate: Date; amount: number }[] = [];
-    deals
+    analyticsDeals
       .filter((d) => d.status === "active" && !d.paidOut)
       .forEach((deal) => {
         const rep = reps.find((r) => r.id === deal.repId);
@@ -131,13 +139,15 @@ export default function Analytics() {
     return entries
       .sort((a, b) => a.payoutDate.getTime() - b.payoutDate.getTime())
       .slice(0, 20);
-  }, [deals, reps]);
+  }, [analyticsDeals, reps]);
 
   // --- Rep Performance ---
   const repPerformance = useMemo(() => {
     return [...team.reps]
+      .filter((r) => isPortalManager || r.rep.id === myRepId)
       .sort((a, b) => b.totalMrr - a.totalMrr)
       .map((r) => ({
+        id: r.rep.id,
         name: r.rep.name,
         avatar: r.rep.avatar,
         mrr: r.totalMrr,
@@ -151,7 +161,7 @@ export default function Analytics() {
             ? ((r.cancelledCount / (r.dealCount + r.cancelledCount)) * 100).toFixed(1)
             : "0.0",
       }));
-  }, [team]);
+  }, [team, isPortalManager, myRepId]);
 
   // --- Churn by Month ---
   const churnByMonth = useMemo(() => {
@@ -162,7 +172,7 @@ export default function Analytics() {
       months.push({ year: d.getFullYear(), month: d.getMonth() });
     }
     return months.map((m) => {
-      const cancelled = deals.filter((d) => {
+      const cancelled = analyticsDeals.filter((d) => {
         if (d.status !== "cancelled") return false;
         const [y, mo] = d.closeDate.split("-").map(Number);
         return y === m.year && mo === m.month + 1;
@@ -173,7 +183,7 @@ export default function Analytics() {
         mrr: cancelled.reduce((sum, d) => sum + calcDealCommission(d).mrr, 0),
       };
     });
-  }, [deals]);
+  }, [analyticsDeals]);
 
   return (
     <motion.div
@@ -196,33 +206,35 @@ export default function Analytics() {
         </div>
       </div>
 
-      {/* Row 1: Commission Liability Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <div className="rounded-2xl border border-l-4 border-l-primary/60 bg-primary/5 p-4">
-          <div className="flex items-center gap-2 mb-1">
-            <Wallet className="h-4 w-4 text-primary" />
-            <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Total liability</p>
+      {/* Row 1: Commission Liability Cards (managers only) */}
+      {showOrgCommission && (
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <div className="rounded-2xl border border-l-4 border-l-primary/60 bg-primary/5 p-4">
+            <div className="flex items-center gap-2 mb-1">
+              <Wallet className="h-4 w-4 text-primary" />
+              <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Total liability</p>
+            </div>
+            <p className="font-mono-tabular text-2xl font-bold text-foreground">{currency.format(totalLiability)}</p>
+            <p className="text-xs text-muted-foreground mt-1">All unpaid commissions owed to reps</p>
           </div>
-          <p className="font-mono-tabular text-2xl font-bold text-foreground">{currency.format(totalLiability)}</p>
-          <p className="text-xs text-muted-foreground mt-1">All unpaid commissions owed to reps</p>
-        </div>
-        <div className="rounded-2xl border border-l-4 border-l-green-500/60 bg-green-500/5 p-4">
-          <div className="flex items-center gap-2 mb-1">
-            <CreditCard className="h-4 w-4 text-green-600 dark:text-green-400" />
-            <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Ready to pay</p>
+          <div className="rounded-2xl border border-l-4 border-l-green-500/60 bg-green-500/5 p-4">
+            <div className="flex items-center gap-2 mb-1">
+              <CreditCard className="h-4 w-4 text-green-600 dark:text-green-400" />
+              <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Ready to pay</p>
+            </div>
+            <p className="font-mono-tabular text-2xl font-bold text-foreground">{currency.format(totalReady)}</p>
+            <p className="text-xs text-muted-foreground mt-1">Commission cleared the lag window</p>
           </div>
-          <p className="font-mono-tabular text-2xl font-bold text-foreground">{currency.format(totalReady)}</p>
-          <p className="text-xs text-muted-foreground mt-1">Commission cleared the lag window</p>
-        </div>
-        <div className="rounded-2xl border border-l-4 border-l-amber-500/60 bg-amber-500/5 p-4">
-          <div className="flex items-center gap-2 mb-1">
-            <AlertCircle className="h-4 w-4 text-amber-600 dark:text-amber-400" />
-            <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">In hold period</p>
+          <div className="rounded-2xl border border-l-4 border-l-amber-500/60 bg-amber-500/5 p-4">
+            <div className="flex items-center gap-2 mb-1">
+              <AlertCircle className="h-4 w-4 text-amber-600 dark:text-amber-400" />
+              <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">In hold period</p>
+            </div>
+            <p className="font-mono-tabular text-2xl font-bold text-foreground">{currency.format(totalPending)}</p>
+            <p className="text-xs text-muted-foreground mt-1">Still in lag window or on trial</p>
           </div>
-          <p className="font-mono-tabular text-2xl font-bold text-foreground">{currency.format(totalPending)}</p>
-          <p className="text-xs text-muted-foreground mt-1">Still in lag window or on trial</p>
         </div>
-      </div>
+      )}
 
       {/* Row 2: MRR Waterfall */}
       <div className="rounded-2xl border border-border bg-card p-5">
@@ -262,7 +274,7 @@ export default function Analytics() {
       </div>
 
       {/* Row 3: Product Mix + Commission Liability by Rep */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+      <div className={`grid grid-cols-1 gap-4 ${showOrgCommission ? "lg:grid-cols-2" : ""}`}>
         {/* Product Mix */}
         <div className="rounded-2xl border border-border bg-card p-5">
           <div className="flex items-center gap-2 mb-4">
@@ -312,77 +324,80 @@ export default function Analytics() {
           )}
         </div>
 
-        {/* Commission Liability by Rep */}
-        <div className="rounded-2xl border border-border bg-card p-5">
-          <div className="flex items-center gap-2 mb-4">
-            <Wallet className="h-4 w-4 text-primary" />
-            <h3 className="font-semibold text-foreground">Commission Owed by Rep</h3>
-          </div>
-          {liabilityByRep.length === 0 ? (
-            <p className="text-sm text-muted-foreground text-center py-8">No pending commissions.</p>
-          ) : (
-            <div className="space-y-3">
-              {liabilityByRep.map((r) => (
-                <div key={r.name}>
-                  <div className="flex items-center justify-between text-sm mb-1">
-                    <span className="font-medium text-foreground">{r.name}</span>
-                    <span className="font-mono-tabular text-primary font-semibold">{currency.format(r.total)}</span>
-                  </div>
-                  <div className="flex h-2 rounded-full overflow-hidden bg-secondary">
-                    <div
-                      className="bg-primary h-full transition-all"
-                      style={{ width: `${totalLiability > 0 ? (r.ready / totalLiability) * 100 : 0}%` }}
-                    />
-                    <div
-                      className="bg-amber-400 h-full transition-all"
-                      style={{ width: `${totalLiability > 0 ? (r.pending / totalLiability) * 100 : 0}%` }}
-                    />
-                  </div>
-                  <div className="flex items-center gap-3 mt-0.5 text-[10px] text-muted-foreground">
-                    <span className="flex items-center gap-1"><span className="h-1.5 w-1.5 rounded-full bg-primary inline-block" />{currency.format(r.ready)} ready</span>
-                    {r.pending > 0 && <span className="flex items-center gap-1"><span className="h-1.5 w-1.5 rounded-full bg-amber-400 inline-block" />{currency.format(r.pending)} pending</span>}
-                  </div>
-                </div>
-              ))}
+        {showOrgCommission && (
+          <div className="rounded-2xl border border-border bg-card p-5">
+            <div className="flex items-center gap-2 mb-4">
+              <Wallet className="h-4 w-4 text-primary" />
+              <h3 className="font-semibold text-foreground">Commission Owed by Rep</h3>
             </div>
-          )}
-        </div>
-      </div>
-
-      {/* Row 4: Payout Calendar */}
-      <div className="rounded-2xl border border-border bg-card p-5">
-        <div className="flex items-center gap-2 mb-4">
-          <CreditCard className="h-4 w-4 text-primary" />
-          <h3 className="font-semibold text-foreground">Upcoming Payout Schedule</h3>
-          <span className="text-xs text-muted-foreground ml-auto">Next 20 unpaid commissions</span>
-        </div>
-        {upcomingPayouts.length === 0 ? (
-          <p className="text-sm text-muted-foreground text-center py-6">No upcoming payouts.</p>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-border text-left">
-                  <th className="pb-2 font-semibold text-muted-foreground text-xs uppercase tracking-wide">Payout Date</th>
-                  <th className="pb-2 font-semibold text-muted-foreground text-xs uppercase tracking-wide">Client</th>
-                  <th className="pb-2 font-semibold text-muted-foreground text-xs uppercase tracking-wide">Rep</th>
-                  <th className="pb-2 font-semibold text-muted-foreground text-xs uppercase tracking-wide text-right">Amount</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-border">
-                {upcomingPayouts.map((p, i) => (
-                  <tr key={i} className="hover:bg-muted/30 transition-colors">
-                    <td className="py-2.5 font-medium text-foreground">{longDateFormat.format(p.payoutDate)}</td>
-                    <td className="py-2.5 text-muted-foreground">{p.clientName}</td>
-                    <td className="py-2.5 text-muted-foreground">{p.repName}</td>
-                    <td className="py-2.5 font-mono-tabular font-semibold text-primary text-right">{currency.format(p.amount)}</td>
-                  </tr>
+            {liabilityByRep.length === 0 ? (
+              <p className="text-sm text-muted-foreground text-center py-8">No pending commissions.</p>
+            ) : (
+              <div className="space-y-3">
+                {liabilityByRep.map((r) => (
+                  <div key={r.name}>
+                    <div className="flex items-center justify-between text-sm mb-1">
+                      <span className="font-medium text-foreground">{r.name}</span>
+                      <span className="font-mono-tabular text-primary font-semibold">{currency.format(r.total)}</span>
+                    </div>
+                    <div className="flex h-2 rounded-full overflow-hidden bg-secondary">
+                      <div
+                        className="bg-primary h-full transition-all"
+                        style={{ width: `${totalLiability > 0 ? (r.ready / totalLiability) * 100 : 0}%` }}
+                      />
+                      <div
+                        className="bg-amber-400 h-full transition-all"
+                        style={{ width: `${totalLiability > 0 ? (r.pending / totalLiability) * 100 : 0}%` }}
+                      />
+                    </div>
+                    <div className="flex items-center gap-3 mt-0.5 text-[10px] text-muted-foreground">
+                      <span className="flex items-center gap-1"><span className="h-1.5 w-1.5 rounded-full bg-primary inline-block" />{currency.format(r.ready)} ready</span>
+                      {r.pending > 0 && <span className="flex items-center gap-1"><span className="h-1.5 w-1.5 rounded-full bg-amber-400 inline-block" />{currency.format(r.pending)} pending</span>}
+                    </div>
+                  </div>
                 ))}
-              </tbody>
-            </table>
+              </div>
+            )}
           </div>
         )}
       </div>
+
+      {/* Row 4: Payout Calendar */}
+      {showOrgCommission && (
+        <div className="rounded-2xl border border-border bg-card p-5">
+          <div className="flex items-center gap-2 mb-4">
+            <CreditCard className="h-4 w-4 text-primary" />
+            <h3 className="font-semibold text-foreground">Upcoming Payout Schedule</h3>
+            <span className="text-xs text-muted-foreground ml-auto">Next 20 unpaid commissions</span>
+          </div>
+          {upcomingPayouts.length === 0 ? (
+            <p className="text-sm text-muted-foreground text-center py-6">No upcoming payouts.</p>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-border text-left">
+                    <th className="pb-2 font-semibold text-muted-foreground text-xs uppercase tracking-wide">Payout Date</th>
+                    <th className="pb-2 font-semibold text-muted-foreground text-xs uppercase tracking-wide">Client</th>
+                    <th className="pb-2 font-semibold text-muted-foreground text-xs uppercase tracking-wide">Rep</th>
+                    <th className="pb-2 font-semibold text-muted-foreground text-xs uppercase tracking-wide text-right">Amount</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-border">
+                  {upcomingPayouts.map((p, i) => (
+                    <tr key={i} className="hover:bg-muted/30 transition-colors">
+                      <td className="py-2.5 font-medium text-foreground">{longDateFormat.format(p.payoutDate)}</td>
+                      <td className="py-2.5 text-muted-foreground">{p.clientName}</td>
+                      <td className="py-2.5 text-muted-foreground">{p.repName}</td>
+                      <td className="py-2.5 font-mono-tabular font-semibold text-primary text-right">{currency.format(p.amount)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Row 5: Rep Performance Table */}
       <div className="rounded-2xl border border-border bg-card p-5">
@@ -400,15 +415,25 @@ export default function Analytics() {
                   <th className="pb-2 font-semibold text-muted-foreground text-xs uppercase tracking-wide">Rep</th>
                   <th className="pb-2 font-semibold text-muted-foreground text-xs uppercase tracking-wide text-right">MRR</th>
                   <th className="pb-2 font-semibold text-muted-foreground text-xs uppercase tracking-wide text-right">Clients</th>
-                  <th className="pb-2 font-semibold text-muted-foreground text-xs uppercase tracking-wide text-right">This Month</th>
+                  {hideCommissionUI ? (
+                    <th className="pb-2 font-semibold text-muted-foreground text-xs uppercase tracking-wide text-right">
+                      Closed (mo)
+                    </th>
+                  ) : (
+                    <th className="pb-2 font-semibold text-muted-foreground text-xs uppercase tracking-wide text-right">
+                      This Month
+                    </th>
+                  )}
                   <th className="pb-2 font-semibold text-muted-foreground text-xs uppercase tracking-wide text-right">Cancelled</th>
                   <th className="pb-2 font-semibold text-muted-foreground text-xs uppercase tracking-wide text-right">Churn%</th>
-                  <th className="pb-2 font-semibold text-muted-foreground text-xs uppercase tracking-wide">Tier</th>
+                  {!hideCommissionUI && (
+                    <th className="pb-2 font-semibold text-muted-foreground text-xs uppercase tracking-wide">Tier</th>
+                  )}
                 </tr>
               </thead>
               <tbody className="divide-y divide-border">
                 {repPerformance.map((r) => (
-                  <tr key={r.name} className="hover:bg-muted/30 transition-colors">
+                  <tr key={r.id} className="hover:bg-muted/30 transition-colors">
                     <td className="py-2.5">
                       <div className="flex items-center gap-2">
                         <div className="h-7 w-7 shrink-0 rounded-full bg-primary/20 text-primary text-xs font-bold flex items-center justify-center overflow-hidden">
@@ -423,16 +448,22 @@ export default function Analytics() {
                     </td>
                     <td className="py-2.5 font-mono-tabular text-right font-semibold text-foreground">{currency.format(r.mrr)}</td>
                     <td className="py-2.5 text-right text-muted-foreground">{r.clients}</td>
-                    <td className="py-2.5 font-mono-tabular text-right text-primary font-semibold">{currency.format(r.thisMonthCommission)}</td>
+                    {hideCommissionUI ? (
+                      <td className="py-2.5 text-right font-semibold text-foreground">{r.closedThisMonth}</td>
+                    ) : (
+                      <td className="py-2.5 font-mono-tabular text-right text-primary font-semibold">{currency.format(r.thisMonthCommission)}</td>
+                    )}
                     <td className="py-2.5 text-right text-muted-foreground">{r.cancelledCount}</td>
                     <td className="py-2.5 text-right">
                       <span className={`font-semibold ${parseFloat(r.churnRate) > 15 ? "text-destructive" : parseFloat(r.churnRate) > 8 ? "text-amber-500" : "text-primary"}`}>
                         {r.churnRate}%
                       </span>
                     </td>
-                    <td className="py-2.5">
-                      <span className="rounded-full bg-primary/10 px-2 py-0.5 text-xs font-semibold text-primary">{r.tier}</span>
-                    </td>
+                    {!hideCommissionUI && (
+                      <td className="py-2.5">
+                        <span className="rounded-full bg-primary/10 px-2 py-0.5 text-xs font-semibold text-primary">{r.tier}</span>
+                      </td>
+                    )}
                   </tr>
                 ))}
               </tbody>

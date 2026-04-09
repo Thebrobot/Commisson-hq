@@ -46,29 +46,52 @@ type AvailabilityFilter = "all" | "trial" | "in_lag" | "ready" | "cancelled";
 type SortKey = "closeDate" | "clientName" | "commission" | "mrr" | "payoutDate";
 type SortDir = "asc" | "desc";
 
-function exportToCSV(items: DealFeedItem[]) {
-  const headers = [
-    "Client Name", "Rep", "Services", "Status", "Close Date",
-    "First Payment", "Payout Date", "MRR", "Commission", "Paid",
-  ];
+function exportToCSV(items: DealFeedItem[], includeCommission: boolean) {
+  const headers = includeCommission
+    ? [
+        "Client Name",
+        "Rep",
+        "Services",
+        "Status",
+        "Close Date",
+        "First Payment",
+        "Payout Date",
+        "MRR",
+        "Commission",
+        "Paid",
+      ]
+    : [
+        "Client Name",
+        "Rep",
+        "Services",
+        "Status",
+        "Close Date",
+        "First Payment",
+        "MRR",
+      ];
   const rows = items.map((item) => {
     const productNames = item.deal.products
       .map((li) => getProductById(li.productId)?.name ?? li.productId)
       .join(" | ");
     const isCancelled = item.deal.status === "cancelled";
     const summary = calcDealCommission(item.deal);
-    return [
+    const base = [
       item.deal.clientName,
       item.rep.name,
       productNames || "Setup-only",
       item.deal.status,
       item.deal.closeDate,
       item.deal.firstPaymentDate ?? "",
-      summary.payoutDate.toISOString().slice(0, 10),
-      isCancelled ? `-${summary.mrr}` : String(summary.mrr),
-      String(summary.totalCommission),
-      item.deal.paidOut ? "Yes" : "No",
-    ].map((v) => `"${String(v).replace(/"/g, '""')}"`).join(",");
+    ];
+    const rest = includeCommission
+      ? [
+          summary.payoutDate.toISOString().slice(0, 10),
+          isCancelled ? `-${summary.mrr}` : String(summary.mrr),
+          String(summary.totalCommission),
+          item.deal.paidOut ? "Yes" : "No",
+        ]
+      : [isCancelled ? `-${summary.mrr}` : String(summary.mrr)];
+    return [...base, ...rest].map((v) => `"${String(v).replace(/"/g, '""')}"`).join(",");
   });
   const csv = [headers.join(","), ...rows].join("\n");
   const blob = new Blob([csv], { type: "text/csv" });
@@ -84,7 +107,23 @@ const Clients = () => {
   const reduceMotion = useReducedMotion();
   const location = useLocation();
   const navigate = useNavigate();
-  const { deals, reps, selectedRepId, setSelectedRepId, team, selectedSummary, selectedRep, updateDeal, addDeal, cancelDeal, deleteDeal, loading } = useDashboard();
+  const {
+    deals,
+    reps,
+    selectedRepId,
+    setSelectedRepId,
+    team,
+    selectedSummary,
+    selectedRep,
+    updateDeal,
+    addDeal,
+    cancelDeal,
+    deleteDeal,
+    loading,
+    hideCommissionUI,
+    isPortalManager,
+    myRepId,
+  } = useDashboard();
   const [selectedItem, setSelectedItem] = useState<DealFeedItem | null>(null);
   const [availabilityFilter, setAvailabilityFilter] = useState<AvailabilityFilter>("all");
   const [search, setSearch] = useState("");
@@ -123,7 +162,9 @@ const Clients = () => {
       if (deal) {
         const rep = reps.find((r) => r.id === deal.repId);
         if (rep) {
-          setSelectedRepId(deal.repId);
+          if (isPortalManager || deal.repId === myRepId) {
+            setSelectedRepId(deal.repId);
+          }
           setSelectedItem({
             deal,
             rep,
@@ -132,7 +173,26 @@ const Clients = () => {
         }
       }
     }
-  }, [location.state, navigate, addDeal, reps, deals, setSelectedRepId, loading]);
+  }, [
+    location.state,
+    navigate,
+    addDeal,
+    reps,
+    deals,
+    setSelectedRepId,
+    loading,
+    isPortalManager,
+    myRepId,
+  ]);
+
+  useEffect(() => {
+    if (
+      hideCommissionUI &&
+      (availabilityFilter === "in_lag" || availabilityFilter === "ready")
+    ) {
+      setAvailabilityFilter("all");
+    }
+  }, [hideCommissionUI, availabilityFilter]);
 
   const clientItems = useMemo(() => {
     const scopedDeals =
@@ -256,7 +316,31 @@ const Clients = () => {
         </div>
         <div className="flex flex-wrap items-center gap-3">
           <div className="w-full sm:w-auto rounded-lg border border-primary/20 bg-primary/5 px-3 py-2 sm:px-4">
-            {selectedRepId === "all" ? (
+            {hideCommissionUI ? (
+              selectedRepId === "all" ? (
+                <>
+                  <p className="text-sm font-semibold text-primary">Team MRR</p>
+                  <p className="font-mono-tabular text-lg font-bold text-foreground">
+                    {currency.format(team.teamMrr)}
+                  </p>
+                  <p className="text-xs text-muted-foreground mt-0.5">
+                    {team.activeClientCount} paying clients
+                  </p>
+                </>
+              ) : selectedSummary ? (
+                <>
+                  <p className="text-sm font-semibold text-primary">
+                    MRR for {selectedRep?.name ?? "rep"}
+                  </p>
+                  <p className="font-mono-tabular text-lg font-bold text-foreground">
+                    {currency.format(selectedSummary.totalMrr)}
+                  </p>
+                  <p className="text-xs text-muted-foreground mt-0.5">
+                    {selectedSummary.payingClientCount} paying clients
+                  </p>
+                </>
+              ) : null
+            ) : selectedRepId === "all" ? (
               <>
                 <p className="text-sm font-semibold text-primary">
                   Team commission this cycle
@@ -290,7 +374,7 @@ const Clients = () => {
             variant="outline"
             size="sm"
             className="gap-2 shrink-0"
-            onClick={() => exportToCSV(filteredItems)}
+            onClick={() => exportToCSV(filteredItems, !hideCommissionUI)}
             title="Export to CSV"
           >
             <Download className="h-4 w-4" />
@@ -313,14 +397,16 @@ const Clients = () => {
         </div>
       )}
 
-      <div className="hidden md:flex flex-col gap-3 rounded-xl border border-border bg-muted/30 p-4 sm:flex-row sm:items-center">
-        <div className="flex items-center gap-2">
-          <Info className="h-4 w-4 shrink-0 text-muted-foreground" />
-          <p className="text-sm text-muted-foreground">
-            Commission has a 5-day hold after close. Trial deals don&apos;t pay commission until the client&apos;s first payment. &quot;Paid&quot; means we&apos;ve sent the payment.
-          </p>
+      {!hideCommissionUI && (
+        <div className="hidden md:flex flex-col gap-3 rounded-xl border border-border bg-muted/30 p-4 sm:flex-row sm:items-center">
+          <div className="flex items-center gap-2">
+            <Info className="h-4 w-4 shrink-0 text-muted-foreground" />
+            <p className="text-sm text-muted-foreground">
+              Commission has a 5-day hold after close. Trial deals don&apos;t pay commission until the client&apos;s first payment. &quot;Paid&quot; means we&apos;ve sent the payment.
+            </p>
+          </div>
         </div>
-      </div>
+      )}
 
       {/* Search + Filter row */}
       <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-3">
@@ -334,7 +420,10 @@ const Clients = () => {
           />
         </div>
         <div className="flex flex-wrap gap-2">
-          {(["all", "trial", "in_lag", "ready", "cancelled"] as AvailabilityFilter[]).map((f) => (
+          {(hideCommissionUI
+            ? (["all", "trial", "cancelled"] as AvailabilityFilter[])
+            : (["all", "trial", "in_lag", "ready", "cancelled"] as AvailabilityFilter[])
+          ).map((f) => (
             <Button
               key={f}
               variant={availabilityFilter === f ? "default" : "outline"}
@@ -357,6 +446,7 @@ const Clients = () => {
           <ClientCard
             key={item.deal.id}
             item={item}
+            hideCommissionUI={hideCommissionUI}
             onClick={() => setSelectedItem(item)}
             onHandoffClick={(e) => {
               e.stopPropagation();
@@ -384,17 +474,25 @@ const Clients = () => {
               <TableHead className="font-semibold">Status</TableHead>
               <SortHeader label="Close Date" colKey="closeDate" />
               <TableHead className="font-semibold">First Payment</TableHead>
-              <SortHeader label="Payout Date" colKey="payoutDate" />
-              <TableHead className="font-semibold">Commission Status</TableHead>
+              {!hideCommissionUI && (
+                <>
+                  <SortHeader label="Payout Date" colKey="payoutDate" />
+                  <TableHead className="font-semibold">Commission Status</TableHead>
+                </>
+              )}
               <SortHeader label="MRR" colKey="mrr" />
-              <SortHeader label="Commission" colKey="commission" />
-              <TableHead className="font-semibold text-center">Paid</TableHead>
+              {!hideCommissionUI && (
+                <>
+                  <SortHeader label="Commission" colKey="commission" />
+                  <TableHead className="font-semibold text-center">Paid</TableHead>
+                </>
+              )}
             </TableRow>
           </TableHeader>
           <TableBody>
             {filteredItems.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={12} className="py-10 text-center text-muted-foreground">
+                <TableCell colSpan={hideCommissionUI ? 8 : 12} className="py-10 text-center text-muted-foreground">
                   No clients match your search.
                 </TableCell>
               </TableRow>
@@ -465,57 +563,65 @@ const Clients = () => {
                       ? longDateFormat.format(new Date(`${item.deal.firstPaymentDate}T12:00:00`))
                       : "\u2014"}
                   </TableCell>
-                  <TableCell className="text-muted-foreground">
-                    {longDateFormat.format(item.summary.payoutDate)}
-                  </TableCell>
-                  <TableCell>
-                    {(() => {
-                      const status = getCommissionStatus(item.deal, item.summary);
-                      if (status === "paid") return <span className="text-muted-foreground">Paid</span>;
-                      if (status === "cancelled") return <span className="text-muted-foreground">\u2014</span>;
-                      if (status === "trial")
-                        return (
-                          <span className="text-amber-600 dark:text-amber-500">
-                            Trial \u2014 {item.deal.firstPaymentDate && shortDate.format(new Date(`${item.deal.firstPaymentDate}T12:00:00`))}
-                          </span>
-                        );
-                      if (status === "ready") return <span className="font-medium text-primary">Ready</span>;
-                      return (
-                        <span className="text-muted-foreground" title={`Clears ${payoutConfig.lagDays}-day hold`}>
-                          In lag \u2014 {shortDate.format(item.summary.availableAt)}
-                        </span>
-                      );
-                    })()}
-                  </TableCell>
+                  {!hideCommissionUI && (
+                    <>
+                      <TableCell className="text-muted-foreground">
+                        {longDateFormat.format(item.summary.payoutDate)}
+                      </TableCell>
+                      <TableCell>
+                        {(() => {
+                          const status = getCommissionStatus(item.deal, item.summary);
+                          if (status === "paid") return <span className="text-muted-foreground">Paid</span>;
+                          if (status === "cancelled") return <span className="text-muted-foreground">\u2014</span>;
+                          if (status === "trial")
+                            return (
+                              <span className="text-amber-600 dark:text-amber-500">
+                                Trial \u2014 {item.deal.firstPaymentDate && shortDate.format(new Date(`${item.deal.firstPaymentDate}T12:00:00`))}
+                              </span>
+                            );
+                          if (status === "ready") return <span className="font-medium text-primary">Ready</span>;
+                          return (
+                            <span className="text-muted-foreground" title={`Clears ${payoutConfig.lagDays}-day hold`}>
+                              In lag \u2014 {shortDate.format(item.summary.availableAt)}
+                            </span>
+                          );
+                        })()}
+                      </TableCell>
+                    </>
+                  )}
                   <TableCell className="font-mono-tabular text-right">
                     {currency.format(mrr)}
                   </TableCell>
-                  <TableCell className="font-mono-tabular text-right font-semibold text-primary">
-                    {currency.format(item.summary.totalCommission)}
-                  </TableCell>
-                  <TableCell
-                    className="text-center"
-                    onClick={(e) => e.stopPropagation()}
-                  >
-                    <Select
-                      value={item.deal.paidOut ? "paid" : "unpaid"}
-                      onValueChange={(value) => {
-                        const paid = value === "paid";
-                        updateDeal(item.deal.id, {
-                          paidOut: paid,
-                          paidOutAt: paid ? new Date().toISOString() : null,
-                        });
-                      }}
-                    >
-                      <SelectTrigger className="h-9 w-[6.5rem]" onClick={(e) => e.stopPropagation()}>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="unpaid">Unpaid</SelectItem>
-                        <SelectItem value="paid">Paid</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </TableCell>
+                  {!hideCommissionUI && (
+                    <>
+                      <TableCell className="font-mono-tabular text-right font-semibold text-primary">
+                        {currency.format(item.summary.totalCommission)}
+                      </TableCell>
+                      <TableCell
+                        className="text-center"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        <Select
+                          value={item.deal.paidOut ? "paid" : "unpaid"}
+                          onValueChange={(value) => {
+                            const paid = value === "paid";
+                            updateDeal(item.deal.id, {
+                              paidOut: paid,
+                              paidOutAt: paid ? new Date().toISOString() : null,
+                            });
+                          }}
+                        >
+                          <SelectTrigger className="h-9 w-[6.5rem]" onClick={(e) => e.stopPropagation()}>
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="unpaid">Unpaid</SelectItem>
+                            <SelectItem value="paid">Paid</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </TableCell>
+                    </>
+                  )}
                 </TableRow>
               );
             })}

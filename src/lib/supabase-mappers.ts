@@ -38,7 +38,12 @@ export function mapRepRow(row: SupabaseRepRow): Rep {
     name: row.name,
     email: row.email,
     avatar: row.avatar ?? "",
-    role: row.role === "manager" ? "manager" : "rep",
+    role:
+      row.role === "manager"
+        ? "manager"
+        : row.role === "partner"
+          ? "partner"
+          : "rep",
     monthlyGoal: row.monthly_goal ?? null,
   };
 }

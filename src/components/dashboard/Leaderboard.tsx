@@ -6,7 +6,15 @@ import RepAvatar from "@/components/dashboard/RepAvatar";
 
 const Leaderboard = () => {
   const reduceMotion = useReducedMotion();
-  const { leaderboard, selectedRepId, setSelectedRepId, isManagerView } = useDashboard();
+  const {
+    leaderboard,
+    selectedRepId,
+    setSelectedRepId,
+    isManagerView,
+    hideCommissionUI,
+    isPortalManager,
+    myRepId,
+  } = useDashboard();
 
   return (
     <motion.div
@@ -17,7 +25,9 @@ const Leaderboard = () => {
     >
       <div className={`flex items-center gap-2 ${isManagerView ? "mb-4" : "mb-3"}`}>
         <Crown className="h-5 w-5 text-yellow-400" strokeWidth={2.5} />
-        <h3 className="text-sm font-semibold uppercase tracking-widest text-foreground">Who's Winning</h3>
+        <h3 className="text-sm font-semibold uppercase tracking-widest text-foreground">
+          {hideCommissionUI ? "Team MRR board" : "Who's Winning"}
+        </h3>
       </div>
 
       <div className="space-y-1.5">
@@ -33,7 +43,10 @@ const Leaderboard = () => {
             >
               <button
                 type="button"
-                onClick={() => setSelectedRepId(entry.rep.id)}
+                onClick={() => {
+                  if (!isPortalManager && entry.rep.id !== myRepId) return;
+                  setSelectedRepId(entry.rep.id);
+                }}
                 className={`flex w-full items-center gap-3 rounded-lg p-2.5 text-left snap-transition ${
                   isActive
                     ? "border border-primary/20 bg-primary/10"
@@ -61,9 +74,11 @@ const Leaderboard = () => {
                     </p>
                     {entry.rank <= 3 && <Star className="h-3 w-3 fill-primary/60 text-primary/60" />}
                   </div>
-                  <p className="font-mono-tabular text-sm font-medium text-foreground">
-                    {currency.format(entry.thisMonthCommission)} this month
-                  </p>
+                  {!hideCommissionUI && (
+                    <p className="font-mono-tabular text-sm font-medium text-foreground">
+                      {currency.format(entry.thisMonthCommission)} this month
+                    </p>
+                  )}
                   <p className="font-mono-tabular text-sm font-medium text-muted-foreground">
                     {currency.format(entry.totalMrr)} MRR
                   </p>

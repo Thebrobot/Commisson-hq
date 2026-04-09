@@ -20,7 +20,7 @@ interface DealFeedProps {
 
 const DealFeed = ({ nextPayoutDate, supportingValue }: DealFeedProps) => {
   const reduceMotion = useReducedMotion();
-  const { feedItems, isManagerView } = useDashboard();
+  const { feedItems, isManagerView, hideCommissionUI } = useDashboard();
   const [selectedItem, setSelectedItem] = useState<DealFeedItem | null>(null);
   const visibleItems = feedItems.slice(0, 6);
   const isEmpty = visibleItems.length === 0;
@@ -39,7 +39,11 @@ const DealFeed = ({ nextPayoutDate, supportingValue }: DealFeedProps) => {
         <div className="flex items-center gap-2">
           <CalendarClock className="h-5 w-5 text-accent" strokeWidth={2.5} />
           <h3 className="text-sm font-semibold uppercase tracking-widest text-foreground">
-            {isManagerView ? "Latest deal activity" : "Commission queue"}
+            {isManagerView
+              ? "Latest deal activity"
+              : hideCommissionUI
+                ? "Deal activity"
+                : "Commission queue"}
           </h3>
           <motion.div
             animate={reduceMotion ? undefined : { opacity: [1, 0.3, 1] }}
@@ -47,7 +51,9 @@ const DealFeed = ({ nextPayoutDate, supportingValue }: DealFeedProps) => {
             className="h-2 w-2 rounded-full bg-primary ml-auto"
           />
         </div>
-        {!isManagerView && (nextPayoutDate != null || supportingValue != null) && (
+        {!isManagerView &&
+          !hideCommissionUI &&
+          (nextPayoutDate != null || supportingValue != null) && (
           <p className={`text-xs ${isPayoutSoon && isEmpty ? "font-medium text-primary" : "text-muted-foreground"}`}>
             {nextPayoutDate
               ? `Next payout: ${longDateFormat.format(nextPayoutDate)} (${daysToPayout} days)`
@@ -68,10 +74,12 @@ const DealFeed = ({ nextPayoutDate, supportingValue }: DealFeedProps) => {
             className="rounded-lg border border-dashed border-border bg-secondary/10 p-4 text-center"
           >
             <p className="text-sm font-medium text-muted-foreground">
-              No deals in the queue yet
+              {hideCommissionUI ? "No deals to show yet" : "No deals in the queue yet"}
             </p>
             <p className="mt-1 text-xs text-muted-foreground">
-              Close a deal to see it here. Your next payout is the goal.
+              {hideCommissionUI
+                ? "Close a deal to see it show up here."
+                : "Close a deal to see it here. Your next payout is the goal."}
             </p>
           </motion.div>
         )}
@@ -130,26 +138,30 @@ const DealFeed = ({ nextPayoutDate, supportingValue }: DealFeedProps) => {
                           {item.deal.status === "cancelled" ? "Cancelled" : "Active"}
                         </span>
                       </div>
-                      {/* Mobile: commission prominent directly under name */}
-                      <p className={`mt-1 font-mono-tabular text-xl font-bold lg:hidden ${isCancelled ? "text-destructive" : "text-primary"}`}>
-                        {currency.format(total)}
-                      </p>
+                      {!hideCommissionUI && (
+                        <p className={`mt-1 font-mono-tabular text-xl font-bold lg:hidden ${isCancelled ? "text-destructive" : "text-primary"}`}>
+                          {currency.format(total)}
+                        </p>
+                      )}
                       <p className="mt-1 text-sm font-medium leading-relaxed text-muted-foreground lg:mt-1">
                         {productNames || "Setup-only deal"}
                       </p>
                       <div className="mt-1.5 flex flex-wrap gap-3 text-sm font-medium text-muted-foreground">
                         <span>{formatRelativeDealDate(item.deal.closeDate)}</span>
-                        <span>{longDateFormat.format(item.summary.payoutDate)} payout</span>
+                        {!hideCommissionUI && (
+                          <span>{longDateFormat.format(item.summary.payoutDate)} payout</span>
+                        )}
                         <span>{currency.format(mrr)} MRR</span>
                       </div>
-                      {/* Desktop: upfront/setup breakdown shown in right column */}
-                      <p className="mt-0.5 text-sm text-muted-foreground hidden lg:block">
-                        {currency.format(upfront)} upfront + {currency.format(setup)} setup
-                      </p>
+                      {!hideCommissionUI && (
+                        <p className="mt-0.5 hidden text-sm text-muted-foreground lg:block">
+                          {currency.format(upfront)} upfront + {currency.format(setup)} setup
+                        </p>
+                      )}
                     </div>
                   </div>
 
-                  {/* Desktop: commission in right column */}
+                  {!hideCommissionUI && (
                   <div className="hidden flex-col items-start gap-2.5 lg:flex lg:items-end">
                     <div className="text-left lg:text-right">
                       <p className={`font-mono-tabular text-xl font-bold ${isCancelled ? "text-destructive" : "text-primary"}`}>
@@ -160,6 +172,7 @@ const DealFeed = ({ nextPayoutDate, supportingValue }: DealFeedProps) => {
                       </p>
                     </div>
                   </div>
+                  )}
                 </div>
               </motion.div>
             );

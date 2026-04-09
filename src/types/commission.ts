@@ -7,7 +7,7 @@ export interface Rep {
   name: string;
   email: string;
   avatar: string;
-  role?: "rep" | "manager";
+  role?: "rep" | "manager" | "partner";
   /** Per-rep monthly goal override. Falls back to payoutConfig.monthlyGoal if null. */
   monthlyGoal?: number | null;
 }

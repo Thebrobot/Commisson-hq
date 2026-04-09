@@ -11,6 +11,7 @@ import {
   SheetHeader,
   SheetTitle,
 } from "@/components/ui/sheet";
+import { useDashboard } from "@/providers/DashboardProvider";
 
 interface ClientProfileSheetProps {
   item: DealFeedItem | null;
@@ -19,6 +20,7 @@ interface ClientProfileSheetProps {
 }
 
 const ClientProfileSheet = ({ item, open, onOpenChange }: ClientProfileSheetProps) => {
+  const { hideCommissionUI } = useDashboard();
   if (!item) return null;
 
   const { deal, rep, summary } = item;
@@ -113,21 +115,25 @@ const ClientProfileSheet = ({ item, open, onOpenChange }: ClientProfileSheetProp
           {/* Deal summary */}
           <div className="space-y-3">
             <h4 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-              Commission summary
+              {hideCommissionUI ? "Deal summary" : "Commission summary"}
             </h4>
             <div className="rounded-lg border border-border bg-secondary/20 p-4 space-y-2">
               <p className="text-sm font-medium text-muted-foreground">
                 {productNames || "Setup-only deal"}
               </p>
-              <p className="text-sm">
-                Payout: {longDateFormat.format(summary.payoutDate)}
-              </p>
+              {!hideCommissionUI && (
+                <p className="text-sm">
+                  Payout: {longDateFormat.format(summary.payoutDate)}
+                </p>
+              )}
               <p className={`font-mono-tabular font-semibold ${isCancelled ? "text-destructive" : "text-primary"}`}>
                 {currency.format(mrr)} MRR
               </p>
-              <p className="text-sm text-muted-foreground">
-                {currency.format(summary.upfrontCommission)} upfront + {currency.format(summary.setupCommission)} setup
-              </p>
+              {!hideCommissionUI && (
+                <p className="text-sm text-muted-foreground">
+                  {currency.format(summary.upfrontCommission)} upfront + {currency.format(summary.setupCommission)} setup
+                </p>
+              )}
             </div>
           </div>
         </div>

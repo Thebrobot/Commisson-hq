@@ -6,7 +6,9 @@ import { useDashboard } from "@/providers/DashboardProvider";
 
 const RepPayoutSummary = () => {
   const reduceMotion = useReducedMotion();
-  const { selectedSummary } = useDashboard();
+  const { selectedSummary, hideCommissionUI } = useDashboard();
+
+  if (hideCommissionUI) return null;
 
   const thisMonthCommission = selectedSummary?.thisMonthCommission ?? 0;
   const availableCommission = selectedSummary?.availableCommission ?? 0;

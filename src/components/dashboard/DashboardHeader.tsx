@@ -29,23 +29,15 @@ import ThemeToggle from "@/components/dashboard/ThemeToggle";
 import NotificationPanel from "@/components/dashboard/NotificationPanel";
 import { useDashboard } from "@/providers/DashboardProvider";
 
-const navItems = [
+const NAV_BASE = [
   { label: "Dashboard", path: "/" },
   { label: "Active Clients", path: "/clients" },
   { label: "Handoff Hub", path: "/handoff" },
-  { label: "Earnings Lab", path: "/commissions" },
-  { label: "Analytics", path: "/analytics" },
-  { label: "Reps", path: "/reps" },
-];
+] as const;
 
-const navItemsMobile = [
-  { label: "Dashboard", path: "/" },
-  { label: "Clients", path: "/clients" },
-  { label: "Handoff Hub", path: "/handoff" },
-  { label: "Earnings Lab", path: "/commissions" },
-  { label: "Analytics", path: "/analytics" },
-  { label: "Reps", path: "/reps" },
-];
+const NAV_COMMISSION = { label: "Earnings Lab", path: "/commissions" } as const;
+const NAV_ANALYTICS = { label: "Analytics", path: "/analytics" } as const;
+const NAV_REPS = { label: "Reps", path: "/reps" } as const;
 
 const DashboardHeader = () => {
   const reduceMotion = useReducedMotion();
@@ -53,7 +45,18 @@ const DashboardHeader = () => {
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [stripeCheckoutOpen, setStripeCheckoutOpen] = useState(false);
-  const { reps, selectedRepId, setSelectedRepId } = useDashboard();
+  const { reps, selectedRepId, setSelectedRepId, myRepId, isPortalManager, hideCommissionUI } =
+    useDashboard();
+  const scopeReps = isPortalManager ? reps : reps.filter((r) => r.id === myRepId);
+  const navItems = [
+    ...NAV_BASE,
+    ...(hideCommissionUI ? [] : [NAV_COMMISSION]),
+    NAV_ANALYTICS,
+    ...(isPortalManager ? [NAV_REPS] : []),
+  ];
+  const navItemsMobile = navItems.map((item) =>
+    item.path === "/clients" ? { ...item, label: "Clients" } : item,
+  );
   const selectedRep = reps.find((rep) => rep.id === selectedRepId) ?? null;
   const selectedLabel = selectedRepId === "all" ? "Team board" : selectedRep?.name ?? "Rep view";
 
@@ -116,7 +119,7 @@ const DashboardHeader = () => {
                   <p className="text-sm font-semibold">Team board</p>
                 </div>
               </DropdownMenuRadioItem>
-              {reps.map((rep) => (
+              {scopeReps.map((rep) => (
                 <DropdownMenuRadioItem key={rep.id} value={rep.id} className="rounded-lg px-3 py-2.5 focus:bg-secondary/70 focus:text-foreground">
                   <div className="flex items-center gap-3">
                     <RepAvatar avatar={rep.avatar} name={rep.name} className="h-8 w-8 rounded-lg" />
@@ -328,7 +331,7 @@ const DashboardHeader = () => {
                     </div>
                   </div>
                 </DropdownMenuRadioItem>
-                {reps.map((rep) => (
+                {scopeReps.map((rep) => (
                   <DropdownMenuRadioItem
                     key={rep.id}
                     value={rep.id}

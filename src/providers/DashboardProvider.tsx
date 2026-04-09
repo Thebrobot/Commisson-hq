@@ -18,6 +18,7 @@ import { defaultHandoff } from "@/lib/handoff";
 import { supabase } from "@/lib/supabase";
 import { toast } from "sonner";
 import { dealToSupabase, mapDealRow, mapRepRow } from "@/lib/supabase-mappers";
+import { hideCommissionUI, isPortalManager } from "@/lib/repRoles";
 import type { Deal, Rep, ViewScope } from "@/types/commission";
 
 const STORAGE_KEY = "commission-current-user";
@@ -34,18 +35,24 @@ interface DashboardContextValue {
   selectedRep: Rep | null;
   setSelectedRepId: (value: ViewScope) => void;
   addDeal: (partial?: Partial<Omit<Deal, "id">>) => Promise<Deal | null>;
-  addRep: (data: { name: string; email: string; role: "rep" | "manager" }) => Promise<Rep | null>;
+  addRep: (data: { name: string; email: string; role: "rep" | "manager" | "partner" }) => Promise<Rep | null>;
   markDealPaid: (dealId: string) => Promise<void>;
   cancelDeal: (dealId: string) => Promise<void>;
   deleteDeal: (dealId: string) => Promise<void>;
   updateDeal: (dealId: string, updates: Partial<Deal>) => Promise<void>;
-  updateRepProfile: (repId: string, updates: { name?: string; email?: string; avatar?: string; role?: "rep" | "manager" }) => Promise<void>;
+  updateRepProfile: (repId: string, updates: { name?: string; email?: string; avatar?: string; role?: "rep" | "manager" | "partner" }) => Promise<void>;
   myRepId: string | null;
   team: ReturnType<typeof aggregateTeam>;
   selectedSummary: ReturnType<typeof aggregateRepDeals> | null;
   leaderboard: ReturnType<typeof getLeaderboard>;
   feedItems: ReturnType<typeof getDealFeedItems>;
   isManagerView: boolean;
+  /** Logged-in user's rep row (from auth / email match). */
+  myRep: Rep | null;
+  /** True when the logged-in user is a manager (full rep switcher, Reps admin, commission tools). */
+  isPortalManager: boolean;
+  /** Sales partner: show MRR/clients only; hide commission and payout UI. */
+  hideCommissionUI: boolean;
   loading: boolean;
   error: string | null;
 }
@@ -68,6 +75,13 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
     const byEmail = repsRaw.find((r) => r.email === user?.email)?.id;
     return byEmail ?? null;
   }, [repsRaw, user?.id, user?.email]);
+
+  const myRep = useMemo(
+    () => (myRepId != null ? repsRaw.find((r) => r.id === myRepId) ?? null : null),
+    [repsRaw, myRepId],
+  );
+  const isPortalManagerUser = isPortalManager(myRep);
+  const hideCommissionUIUser = hideCommissionUI(myRep);
 
   // Fetch reps and deals from Supabase
   const loadData = useCallback(async () => {
@@ -155,10 +169,25 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
     }
   }, [repsRaw]);
 
-  const setSelectedRepId = useCallback((value: ViewScope) => {
-    setSelectedRepIdState(value);
-    window.localStorage.setItem(STORAGE_KEY, value);
-  }, []);
+  // Non-managers may only use Team board or their own rep scope.
+  useEffect(() => {
+    if (repsRaw.length === 0 || myRepId == null) return;
+    if (isPortalManagerUser) return;
+    if (selectedRepId === "all" || selectedRepId === myRepId) return;
+    setSelectedRepIdState("all");
+    window.localStorage.setItem(STORAGE_KEY, "all");
+  }, [repsRaw.length, myRepId, selectedRepId, isPortalManagerUser]);
+
+  const setSelectedRepId = useCallback(
+    (value: ViewScope) => {
+      if (!isPortalManagerUser && value !== "all" && value !== myRepId) {
+        return;
+      }
+      setSelectedRepIdState(value);
+      window.localStorage.setItem(STORAGE_KEY, value);
+    },
+    [isPortalManagerUser, myRepId],
+  );
 
   const addDeal = useCallback(
     async (partial?: Partial<Omit<Deal, "id">>) => {
@@ -289,12 +318,14 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
     );
   }, [tenantId]);
 
-  const updateRepProfile = useCallback(async (repId: string, updates: { name?: string; email?: string; avatar?: string; role?: "rep" | "manager" }) => {
+  const updateRepProfile = useCallback(async (repId: string, updates: { name?: string; email?: string; avatar?: string; role?: "rep" | "manager" | "partner" }) => {
     const row: Record<string, unknown> = {};
     if (updates.name != null && updates.name.trim()) row.name = updates.name.trim();
     if (updates.email != null && updates.email.trim()) row.email = updates.email.trim();
     if (updates.avatar !== undefined) row.avatar = updates.avatar?.trim() || null;
-    if (updates.role === "rep" || updates.role === "manager") row.role = updates.role;
+    if (updates.role === "rep" || updates.role === "manager" || updates.role === "partner") {
+      row.role = updates.role;
+    }
 
     if (Object.keys(row).length === 0) return;
 
@@ -328,14 +359,14 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
               ...(row.name != null && { name: row.name as string }),
               ...(row.email != null && { email: row.email as string }),
               ...(row.avatar !== undefined && { avatar: (row.avatar as string | null) ?? "" }),
-              ...(row.role != null && { role: row.role as "rep" | "manager" }),
+              ...(row.role != null && { role: row.role as "rep" | "manager" | "partner" }),
             }
           : r,
       ),
     );
   }, [myRepId]);
 
-  const addRep = useCallback(async (data: { name: string; email: string; role: "rep" | "manager" }) => {
+  const addRep = useCallback(async (data: { name: string; email: string; role: "rep" | "manager" | "partner" }) => {
     if (!tenantId) return null;
     const row = {
       tenant_id: tenantId,
@@ -397,6 +428,9 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
       leaderboard,
       feedItems,
       isManagerView: selectedRepId === "all",
+      myRep,
+      isPortalManager: isPortalManagerUser,
+      hideCommissionUI: hideCommissionUIUser,
       loading,
       error,
     }),
@@ -408,9 +442,12 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
       deals,
       error,
       feedItems,
+      hideCommissionUIUser,
+      isPortalManagerUser,
       leaderboard,
       loading,
       markDealPaid,
+      myRep,
       myRepId,
       reps,
       selectedRep,
