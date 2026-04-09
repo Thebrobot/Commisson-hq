@@ -23,6 +23,12 @@ import type { Deal, Rep, ViewScope } from "@/types/commission";
 
 const STORAGE_KEY = "commission-current-user";
 
+export interface AddRepResult {
+  rep: Rep | null;
+  inviteSent: boolean;
+  inviteNote?: string;
+}
+
 interface RepWithTenant extends Rep {
   tenantId?: string;
   authUserId?: string | null;
@@ -35,7 +41,7 @@ interface DashboardContextValue {
   selectedRep: Rep | null;
   setSelectedRepId: (value: ViewScope) => void;
   addDeal: (partial?: Partial<Omit<Deal, "id">>) => Promise<Deal | null>;
-  addRep: (data: { name: string; email: string; role: "rep" | "manager" | "partner" }) => Promise<Rep | null>;
+  addRep: (data: { name: string; email: string; role: "rep" | "manager" | "partner" }) => Promise<AddRepResult>;
   markDealPaid: (dealId: string) => Promise<void>;
   cancelDeal: (dealId: string) => Promise<void>;
   deleteDeal: (dealId: string) => Promise<void>;
@@ -366,8 +372,10 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
     );
   }, [myRepId]);
 
-  const addRep = useCallback(async (data: { name: string; email: string; role: "rep" | "manager" | "partner" }) => {
-    if (!tenantId) return null;
+  const addRep = useCallback(async (data: { name: string; email: string; role: "rep" | "manager" | "partner" }): Promise<AddRepResult> => {
+    if (!tenantId) {
+      return { rep: null, inviteSent: false, inviteNote: "No tenant loaded." };
+    }
     const row = {
       tenant_id: tenantId,
       name: data.name.trim(),
@@ -382,7 +390,39 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
     }
     const newRep: RepWithTenant = { ...mapRepRow(inserted), tenantId: inserted.tenant_id, authUserId: inserted.auth_user_id ?? null };
     setRepsRaw((prev) => [...prev, newRep]);
-    return newRep;
+
+    let inviteSent = false;
+    let inviteNote: string | undefined;
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session?.access_token) {
+      inviteNote = "Invite email was not sent (no session). They can still use Sign up with this email.";
+    } else {
+      try {
+        const res = await fetch("/api/invite-rep", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${session.access_token}`,
+          },
+          body: JSON.stringify({ email: newRep.email }),
+        });
+        const payload = (await res.json().catch(() => ({}))) as { error?: string; code?: string };
+        if (res.ok) {
+          inviteSent = true;
+        } else if (res.status === 409) {
+          inviteNote =
+            payload.error ??
+            "This email already has an account — they can sign in with the same address.";
+        } else {
+          inviteNote = payload.error ?? `Invite failed (${res.status}). Rep was still created.`;
+        }
+      } catch (e) {
+        console.error("[addRep] invite-rep", e);
+        inviteNote = "Could not reach invite service. Rep was created — send them the login link manually.";
+      }
+    }
+
+    return { rep: newRep, inviteSent, inviteNote };
   }, [tenantId]);
 
   const reps = useMemo(() => repsRaw, [repsRaw]);

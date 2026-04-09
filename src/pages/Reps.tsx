@@ -102,12 +102,26 @@ export default function Reps() {
     if (!addState || !addState.name.trim() || !addState.email.trim()) return;
     setSaving(true);
     try {
-      await addRep({
+      const { rep, inviteSent, inviteNote } = await addRep({
         name: addState.name.trim(),
         email: addState.email.trim().toLowerCase(),
         role: addState.role,
       });
-      toast.success(`${addState.name} added as a ${addState.role}`);
+      if (!rep) {
+        toast.error(inviteNote ?? "Could not add rep");
+        return;
+      }
+      const roleLabel =
+        addState.role === "partner" ? "sales partner" : addState.role === "manager" ? "manager" : "rep";
+      if (inviteSent) {
+        toast.success(`${addState.name} added as ${roleLabel}. An invite email was sent to ${addState.email}.`);
+      } else if (inviteNote) {
+        toast.message(`${addState.name} added as ${roleLabel}`, {
+          description: inviteNote,
+        });
+      } else {
+        toast.success(`${addState.name} added as ${roleLabel}.`);
+      }
       setAddState(null);
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Failed to add rep");
@@ -336,7 +350,8 @@ export default function Reps() {
           {addState && (
             <div className="space-y-4 py-2">
               <p className="text-sm text-muted-foreground">
-                Creates a rep record. They&apos;ll need to sign up with the same email to access the dashboard.
+                Creates their profile and sends an email invite so they can set a password. If they already have an
+                account, they&apos;ll see a note to sign in instead.
               </p>
               <div className="space-y-2">
                 <Label htmlFor="add-name">Name</Label>
