@@ -10,6 +10,7 @@ import {
 import { handoffProgress, isHandoffComplete } from "@/lib/handoff";
 import { payoutConfig } from "@/data/catalog/commission";
 import type { DealFeedItem } from "@/types/commission";
+import { isSalesPartner } from "@/lib/repRoles";
 import { Button } from "@/components/ui/button";
 import {
   Select,
@@ -83,6 +84,11 @@ export default function ClientCard({
             <span className="rounded-full border border-border px-2 py-0.5 text-xs font-medium text-muted-foreground">
               {item.rep.name}
             </span>
+            {isSalesPartner(item.rep) && (
+              <span className="rounded-full border border-primary/25 bg-primary/10 px-2 py-0.5 text-[10px] font-semibold uppercase text-primary">
+                Partner
+              </span>
+            )}
             <span
               className={`rounded-full px-2 py-0.5 text-xs font-semibold uppercase ${
                 isCancelled ? "bg-destructive/10 text-destructive" : "bg-primary/10 text-primary"

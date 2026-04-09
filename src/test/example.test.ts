@@ -93,4 +93,20 @@ describe("commission domain logic", () => {
       assignedRepEmail: "kyle@brobot.io",
     });
   });
+
+  it("accepts rep_email as an alias for assigned_rep_email", () => {
+    expect(
+      normalizeWebhookPayload({
+        contact_id: "ghl_789",
+        company_name: "Partner Co",
+        rep_email: "PARTNER@EXAMPLE.COM",
+      }),
+    ).toEqual({
+      clientName: "Partner Co",
+      ghlContactId: "ghl_789",
+      contactEmail: null,
+      contactPhone: null,
+      assignedRepEmail: "partner@example.com",
+    });
+  });
 });

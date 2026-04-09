@@ -43,7 +43,12 @@ interface EditRepState {
 interface AddRepState {
   name: string;
   email: string;
-  role: "rep" | "manager" | "partner";
+  role: "rep" | "manager";
+}
+
+interface AddPartnerState {
+  name: string;
+  email: string;
 }
 
 export default function Reps() {
@@ -52,6 +57,7 @@ export default function Reps() {
     useDashboard();
   const [editState, setEditState] = useState<EditRepState | null>(null);
   const [addState, setAddState] = useState<AddRepState | null>(null);
+  const [addPartnerState, setAddPartnerState] = useState<AddPartnerState | null>(null);
   const [repToDelete, setRepToDelete] = useState<Rep | null>(null);
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
@@ -123,8 +129,7 @@ export default function Reps() {
         toast.error(inviteNote ?? "Could not add rep");
         return;
       }
-      const roleLabel =
-        addState.role === "partner" ? "sales partner" : addState.role === "manager" ? "manager" : "rep";
+      const roleLabel = addState.role === "manager" ? "manager" : "rep";
       if (inviteSent) {
         toast.success(`${addState.name} added as ${roleLabel}. An invite email was sent to ${addState.email}.`);
       } else if (inviteNote) {
@@ -137,6 +142,33 @@ export default function Reps() {
       setAddState(null);
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Failed to add rep");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleAddSalesPartner = async () => {
+    if (!addPartnerState || !addPartnerState.name.trim() || !addPartnerState.email.trim()) return;
+    setSaving(true);
+    try {
+      const { rep, inviteNote } = await addRep(
+        {
+          name: addPartnerState.name.trim(),
+          email: addPartnerState.email.trim().toLowerCase(),
+          role: "partner",
+        },
+        { sendInvite: false },
+      );
+      if (!rep) {
+        toast.error(inviteNote ?? "Could not add sales partner");
+        return;
+      }
+      toast.success(
+        `${addPartnerState.name.trim()} added as a sales partner (no login invite). Assign deals to them in the client editor or when creating deals.`,
+      );
+      setAddPartnerState(null);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to add sales partner");
     } finally {
       setSaving(false);
     }
@@ -189,14 +221,25 @@ export default function Reps() {
             <div className="mt-2 h-0.5 w-10 rounded-full bg-primary" />
           </div>
         </div>
-        <Button
-          size="sm"
-          className="gap-2"
-          onClick={() => setAddState({ name: "", email: "", role: "rep" })}
-        >
-          <Plus className="h-4 w-4" />
-          Add Rep
-        </Button>
+        <div className="flex flex-wrap items-center justify-end gap-2">
+          <Button
+            size="sm"
+            variant="outline"
+            className="gap-2"
+            onClick={() => setAddPartnerState({ name: "", email: "" })}
+          >
+            <Handshake className="h-4 w-4" />
+            Add sales partner
+          </Button>
+          <Button
+            size="sm"
+            className="gap-2"
+            onClick={() => setAddState({ name: "", email: "", role: "rep" })}
+          >
+            <Plus className="h-4 w-4" />
+            Add rep
+          </Button>
+        </div>
       </div>
 
       {/* Rep Cards */}
@@ -305,11 +348,17 @@ export default function Reps() {
         <div className="rounded-2xl border border-dashed border-border p-12 text-center">
           <Users className="h-8 w-8 text-muted-foreground mx-auto mb-3" />
           <p className="text-foreground font-medium">No reps yet</p>
-          <p className="text-sm text-muted-foreground mt-1">Add your first rep to get started.</p>
-          <Button className="mt-4 gap-2" onClick={() => setAddState({ name: "", email: "", role: "rep" })}>
-            <Plus className="h-4 w-4" />
-            Add Rep
-          </Button>
+          <p className="text-sm text-muted-foreground mt-1">Add reps (with login invite) or external sales partners (record only).</p>
+          <div className="mt-4 flex flex-wrap justify-center gap-2">
+            <Button className="gap-2" onClick={() => setAddState({ name: "", email: "", role: "rep" })}>
+              <Plus className="h-4 w-4" />
+              Add rep
+            </Button>
+            <Button variant="outline" className="gap-2" onClick={() => setAddPartnerState({ name: "", email: "" })}>
+              <Handshake className="h-4 w-4" />
+              Add sales partner
+            </Button>
+          </div>
         </div>
       )}
 
@@ -412,13 +461,14 @@ export default function Reps() {
       <Dialog open={addState !== null} onOpenChange={(open) => !open && setAddState(null)}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>Add Rep</DialogTitle>
+            <DialogTitle>Add rep</DialogTitle>
           </DialogHeader>
           {addState && (
             <div className="space-y-4 py-2">
               <p className="text-sm text-muted-foreground">
-                Creates their profile and sends an email invite so they can set a password. If they already have an
-                account, they&apos;ll see a note to sign in instead.
+                Creates a team member who can log in. We&apos;ll send an email invite to set a password. If they
+                already have an account, they&apos;ll get a note to sign in instead. For external partners with no
+                login, use <span className="font-medium text-foreground">Add sales partner</span>.
               </p>
               <div className="space-y-2">
                 <Label htmlFor="add-name">Name</Label>
@@ -443,14 +493,13 @@ export default function Reps() {
                 <Label>Role</Label>
                 <Select
                   value={addState.role}
-                  onValueChange={(v) => setAddState((s) => s && ({ ...s, role: v as "rep" | "manager" | "partner" }))}
+                  onValueChange={(v) => setAddState((s) => s && ({ ...s, role: v as "rep" | "manager" }))}
                 >
                   <SelectTrigger>
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="rep">Rep</SelectItem>
-                    <SelectItem value="partner">Sales partner</SelectItem>
                     <SelectItem value="manager">Manager</SelectItem>
                   </SelectContent>
                 </Select>
@@ -463,7 +512,53 @@ export default function Reps() {
               onClick={handleAddRep}
               disabled={saving || !addState?.name.trim() || !addState?.email.trim()}
             >
-              {saving ? "Adding..." : "Add Rep"}
+              {saving ? "Adding…" : "Add rep & send invite"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={addPartnerState !== null} onOpenChange={(open) => !open && setAddPartnerState(null)}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Add sales partner</DialogTitle>
+          </DialogHeader>
+          {addPartnerState && (
+            <div className="space-y-4 py-2">
+              <p className="text-sm text-muted-foreground">
+                Adds them to the team as a <span className="font-medium text-foreground">sales partner</span> so you
+                can attribute deals and MRR. <span className="font-medium text-foreground">No login email is sent.</span>{" "}
+                Each deal is stored with that partner&apos;s row <span className="font-medium text-foreground">ID</span>{" "}
+                in the database (email is only for your records and future linking if they ever sign up).
+              </p>
+              <div className="space-y-2">
+                <Label htmlFor="partner-name">Name</Label>
+                <Input
+                  id="partner-name"
+                  value={addPartnerState.name}
+                  onChange={(e) => setAddPartnerState((s) => s && ({ ...s, name: e.target.value }))}
+                  placeholder="Partner or channel name"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="partner-email">Email</Label>
+                <Input
+                  id="partner-email"
+                  type="email"
+                  value={addPartnerState.email}
+                  onChange={(e) => setAddPartnerState((s) => s && ({ ...s, email: e.target.value }))}
+                  placeholder="contact@partner.com"
+                />
+              </div>
+            </div>
+          )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setAddPartnerState(null)}>Cancel</Button>
+            <Button
+              onClick={() => void handleAddSalesPartner()}
+              disabled={saving || !addPartnerState?.name.trim() || !addPartnerState?.email.trim()}
+            >
+              {saving ? "Adding…" : "Add sales partner"}
             </Button>
           </DialogFooter>
         </DialogContent>

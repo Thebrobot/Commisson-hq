@@ -8,13 +8,16 @@
  *   "contact_phone": "{{contact.phone}}",
  *   "assigned_rep_email": "{{contact.rep_email}}"
  * }
+ *
+ * You may send `rep_email` instead of `assigned_rep_email` if your automation uses that key.
  */
 export interface GhlWebhookPayload {
   contact_id: string;
   company_name: string;
   contact_email?: string;
   contact_phone?: string;
-  assigned_rep_email: string;
+  assigned_rep_email?: string;
+  rep_email?: string;
 }
 
 export interface NormalizedWebhookDealDraft {

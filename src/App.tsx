@@ -19,7 +19,7 @@ import Login from "@/pages/Login";
 import NotFound from "@/pages/NotFound";
 
 function LoginRoute() {
-  const { user, loading } = useAuth();
+  const { user, loading, passwordRecovery } = useAuth();
   if (loading) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-background">
@@ -27,7 +27,7 @@ function LoginRoute() {
       </div>
     );
   }
-  if (user) return <Navigate to="/" replace />;
+  if (user && !passwordRecovery) return <Navigate to="/" replace />;
   return <Login />;
 }
 

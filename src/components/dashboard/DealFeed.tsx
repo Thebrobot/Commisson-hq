@@ -9,6 +9,7 @@ import {
   longDateFormat,
 } from "@/lib/commission";
 import type { DealFeedItem } from "@/types/commission";
+import { isSalesPartner } from "@/lib/repRoles";
 import { useDashboard } from "@/providers/DashboardProvider";
 import ClientProfileSheet from "@/components/dashboard/ClientProfileSheet";
 import RepAvatar from "@/components/dashboard/RepAvatar";
@@ -128,6 +129,11 @@ const DealFeed = ({ nextPayoutDate, supportingValue }: DealFeedProps) => {
                         <span className="rounded-full border border-border px-2 py-0.5 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
                           {item.rep.name}
                         </span>
+                        {isSalesPartner(item.rep) && (
+                          <span className="rounded-full border border-primary/25 bg-primary/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-primary">
+                            Partner
+                          </span>
+                        )}
                         <span
                           className={`rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider ${
                             item.deal.status === "cancelled"

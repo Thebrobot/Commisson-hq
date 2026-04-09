@@ -9,6 +9,7 @@ import {
   longDateFormat,
   resolveCommissionableMrr,
 } from "@/lib/commission";
+import { isSalesPartner } from "@/lib/repRoles";
 import { productCatalog, setupFeeCatalog } from "@/data/catalog/commission";
 import {
   StripeCheckoutControls,
@@ -403,7 +404,7 @@ const ClientEditSheet = ({
                 <SelectContent modal={false} position="popper" className="z-[100]">
                   {assignableReps.map((r) => (
                     <SelectItem key={r.id} value={r.id}>
-                      {r.name}
+                      {isSalesPartner(r) ? `${r.name} (partner)` : r.name}
                     </SelectItem>
                   ))}
                 </SelectContent>

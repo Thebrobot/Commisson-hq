@@ -13,6 +13,9 @@ interface AuthContextValue {
   user: User | null;
   loading: boolean;
   signOut: () => Promise<void>;
+  /** True after the user opens a password-reset email link; show “new password” UI before redirecting. */
+  passwordRecovery: boolean;
+  clearPasswordRecovery: () => void;
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null);
@@ -20,6 +23,7 @@ const AuthContext = createContext<AuthContextValue | null>(null);
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
+  const [passwordRecovery, setPasswordRecovery] = useState(false);
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -29,21 +33,46 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
+    } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === "PASSWORD_RECOVERY") {
+        setPasswordRecovery(true);
+      }
       setUser(session?.user ?? null);
     });
 
     return () => subscription.unsubscribe();
   }, []);
 
+  useEffect(() => {
+    const syncRecoveryFromHash = () => {
+      try {
+        const hash = window.location.hash.replace(/^#/, "");
+        if (!hash) return;
+        const type = new URLSearchParams(hash).get("type");
+        if (type === "recovery") setPasswordRecovery(true);
+      } catch {
+        /* ignore malformed hash */
+      }
+    };
+    syncRecoveryFromHash();
+    window.addEventListener("hashchange", syncRecoveryFromHash);
+    return () => window.removeEventListener("hashchange", syncRecoveryFromHash);
+  }, []);
+
   const signOut = useCallback(async () => {
     await supabase.auth.signOut();
+  }, []);
+
+  const clearPasswordRecovery = useCallback(() => {
+    setPasswordRecovery(false);
   }, []);
 
   const value: AuthContextValue = {
     user,
     loading,
     signOut,
+    passwordRecovery,
+    clearPasswordRecovery,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

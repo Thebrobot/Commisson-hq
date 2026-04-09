@@ -20,6 +20,7 @@ import {
   isHandoffComplete,
 } from "@/lib/handoff";
 import { payoutConfig } from "@/data/catalog/commission";
+import { isSalesPartner } from "@/lib/repRoles";
 import { useDashboard } from "@/providers/DashboardProvider";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -542,7 +543,16 @@ const Clients = () => {
                     )}
                   </TableCell>
                   <TableCell className="font-medium">{item.deal.clientName}</TableCell>
-                  <TableCell className="text-muted-foreground">{item.rep.name}</TableCell>
+                  <TableCell className="text-muted-foreground">
+                    <span className="inline-flex flex-wrap items-center gap-1.5">
+                      <span>{item.rep.name}</span>
+                      {isSalesPartner(item.rep) && (
+                        <span className="rounded-full border border-primary/25 bg-primary/10 px-1.5 py-0 text-[10px] font-semibold uppercase text-primary">
+                          Partner
+                        </span>
+                      )}
+                    </span>
+                  </TableCell>
                   <TableCell className="max-w-[200px] truncate text-muted-foreground" title={productNames || "Setup-only"}>
                     {productNames || "Setup-only"}
                   </TableCell>
