@@ -221,24 +221,31 @@ export default function Reps() {
             <div className="mt-2 h-0.5 w-10 rounded-full bg-primary" />
           </div>
         </div>
-        <div className="flex flex-wrap items-center justify-end gap-2">
-          <Button
-            size="sm"
-            variant="outline"
-            className="gap-2"
-            onClick={() => setAddPartnerState({ name: "", email: "" })}
-          >
-            <Handshake className="h-4 w-4" />
-            Add sales partner
-          </Button>
-          <Button
-            size="sm"
-            className="gap-2"
-            onClick={() => setAddState({ name: "", email: "", role: "rep" })}
-          >
-            <Plus className="h-4 w-4" />
-            Add rep
-          </Button>
+        <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:flex-wrap sm:items-center sm:justify-end">
+          <p className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground sm:sr-only">
+            Add to team
+          </p>
+          <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:justify-end">
+            <Button
+              size="sm"
+              className="gap-2"
+              onClick={() => setAddState({ name: "", email: "", role: "rep" })}
+              title="Sends a login invite email"
+            >
+              <Plus className="h-4 w-4" />
+              Add rep
+            </Button>
+            <Button
+              size="sm"
+              variant="secondary"
+              className="gap-2"
+              onClick={() => setAddPartnerState({ name: "", email: "" })}
+              title="Creates partner row only — no login invite"
+            >
+              <Handshake className="h-4 w-4" />
+              Add sales partner
+            </Button>
+          </div>
         </div>
       </div>
 
@@ -349,12 +356,12 @@ export default function Reps() {
           <Users className="h-8 w-8 text-muted-foreground mx-auto mb-3" />
           <p className="text-foreground font-medium">No reps yet</p>
           <p className="text-sm text-muted-foreground mt-1">Add reps (with login invite) or external sales partners (record only).</p>
-          <div className="mt-4 flex flex-wrap justify-center gap-2">
+          <div className="mt-4 flex flex-col items-stretch gap-2 sm:flex-row sm:flex-wrap sm:justify-center sm:items-center">
             <Button className="gap-2" onClick={() => setAddState({ name: "", email: "", role: "rep" })}>
               <Plus className="h-4 w-4" />
               Add rep
             </Button>
-            <Button variant="outline" className="gap-2" onClick={() => setAddPartnerState({ name: "", email: "" })}>
+            <Button variant="secondary" className="gap-2" onClick={() => setAddPartnerState({ name: "", email: "" })}>
               <Handshake className="h-4 w-4" />
               Add sales partner
             </Button>
@@ -541,14 +548,18 @@ export default function Reps() {
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="partner-email">Email</Label>
+                <Label htmlFor="partner-email">Email (webhook matching — not for login)</Label>
                 <Input
                   id="partner-email"
                   type="email"
                   value={addPartnerState.email}
                   onChange={(e) => setAddPartnerState((s) => s && ({ ...s, email: e.target.value }))}
                   placeholder="contact@partner.com"
+                  autoComplete="off"
                 />
+                <p className="text-xs text-muted-foreground">
+                  This address must match what GoHighLevel sends as the rep email. We do not email this person from Commission HQ.
+                </p>
               </div>
             </div>
           )}
@@ -558,7 +569,7 @@ export default function Reps() {
               onClick={() => void handleAddSalesPartner()}
               disabled={saving || !addPartnerState?.name.trim() || !addPartnerState?.email.trim()}
             >
-              {saving ? "Adding…" : "Add sales partner"}
+              {saving ? "Adding…" : "Add partner (no invite)"}
             </Button>
           </DialogFooter>
         </DialogContent>

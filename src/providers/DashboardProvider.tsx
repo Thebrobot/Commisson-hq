@@ -414,8 +414,10 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
       };
       setRepsRaw((prev) => [...prev, newRep]);
 
-      const sendInvite = options?.sendInvite !== false;
-      if (!sendInvite) {
+      // Sales partners are record-only (webhook / deal attribution). Never send auth invite for partner role.
+      const shouldSendInvite =
+        data.role !== "partner" && options?.sendInvite !== false;
+      if (!shouldSendInvite) {
         return { rep: newRep, inviteSent: false, inviteNote: undefined };
       }
 
