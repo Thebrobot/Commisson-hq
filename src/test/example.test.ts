@@ -10,8 +10,8 @@ describe("commission domain logic", () => {
       repId: "rep-1",
       clientName: "Acme Corp",
       ghlContactId: null,
-      products: [{ productId: "ai-growth", quantity: 1, overrideMrr: null }],
-      setupFees: [{ type: "deployment_standard", actualAmount: 1500 }],
+      products: [{ productId: "imapspro", quantity: 1, overrideMrr: null }],
+      setupFees: [{ type: "agent_broski_receptionist_setup", actualAmount: 1500 }],
       closeDate: "2026-03-10",
       status: "active",
       paidOut: false,
@@ -20,14 +20,14 @@ describe("commission domain logic", () => {
 
     const summary = calcDealCommission(deal, new Date("2026-03-20T12:00:00Z"));
 
-    expect(summary.mrr).toBe(697);
-    expect(summary.upfrontCommission).toBe(697);
+    expect(summary.mrr).toBe(25);
+    expect(summary.upfrontCommission).toBe(25);
     expect(summary.setupCommission).toBe(150);
-    expect(summary.totalCommission).toBe(847);
+    expect(summary.totalCommission).toBe(175);
     expect(summary.availableNow).toBe(true);
   });
 
-  it("uses override MRR when the product allows it", () => {
+  it("uses override MRR for book MRR while fixed package sale pay stays on catalog", () => {
     const deal: Deal = {
       id: "test-2",
       repId: "rep-1",
@@ -44,7 +44,8 @@ describe("commission domain logic", () => {
     const summary = calcDealCommission(deal, new Date("2026-03-20T12:00:00Z"));
 
     expect(summary.mrr).toBe(179.99);
-    expect(summary.totalCommission).toBe(179.99);
+    expect(summary.upfrontCommission).toBe(130);
+    expect(summary.totalCommission).toBe(130);
   });
 
   it("finds the correct payout window after the five-day lag", () => {

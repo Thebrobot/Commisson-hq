@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { Ban, ClipboardCheck, CreditCard, ExternalLink, Mail, Phone, Plus, Trash2, User } from "lucide-react";
 import {
@@ -7,9 +7,13 @@ import {
   getProductById,
   getSetupFeeById,
   longDateFormat,
+  resolveCommissionableMrr,
 } from "@/lib/commission";
 import { productCatalog, setupFeeCatalog } from "@/data/catalog/commission";
-import { handoffProductColumns } from "@/data/handoffToolbox";
+import {
+  StripeCheckoutControls,
+  type MatrixLineApplyPayload,
+} from "@/components/dashboard/StripeCheckoutControls";
 import type {
   Deal,
   DealFeedItem,
@@ -65,6 +69,7 @@ const ClientEditSheet = ({
   const [products, setProducts] = useState<DealProductLineItem[]>([]);
   const [setupFees, setSetupFees] = useState<DealSetupFeeLineItem[]>([]);
   const [notes, setNotes] = useState("");
+  const [stripeApplyTarget, setStripeApplyTarget] = useState<string>("new");
 
   useEffect(() => {
     if (item) {
@@ -95,6 +100,20 @@ const ClientEditSheet = ({
       );
     }
   }, [item]);
+
+  const stripeApplyOptions = useMemo(() => {
+    const opts: { value: string; label: string }[] = [
+      { value: "new", label: "New product line" },
+    ];
+    products.forEach((p, i) => {
+      const name = p.productId ? getProductById(p.productId)?.name ?? p.productId : "Empty";
+      opts.push({
+        value: String(i),
+        label: `Line ${i + 1}: ${name}`,
+      });
+    });
+    return opts;
+  }, [products]);
 
   if (!item) return null;
 
@@ -133,6 +152,60 @@ const ClientEditSheet = ({
 
   const removeProduct = (index: number) => {
     setProducts((prev) => (prev.length > 1 ? prev.filter((_, i) => i !== index) : prev));
+  };
+
+  const ensureAgentSetupFee = (catalogProductId: string) => {
+    if (catalogProductId !== "ai-receptionist" && catalogProductId !== "agent-broski-voice-sms") {
+      return;
+    }
+    const type =
+      catalogProductId === "ai-receptionist"
+        ? "agent_broski_receptionist_setup"
+        : "agent_broski_voice_sms_setup";
+    const amount = catalogProductId === "ai-receptionist" ? 1500 : 2500;
+    setSetupFees((prev) => {
+      const has = prev.some((s) => s.type === type && s.actualAmount > 0);
+      if (has) return prev;
+      const empty = prev.findIndex((s) => !s.type || s.actualAmount <= 0);
+      if (empty >= 0) {
+        return prev.map((s, i) =>
+          i === empty ? { type, actualAmount: amount } : s,
+        );
+      }
+      return [...prev, { type, actualAmount: amount }];
+    });
+  };
+
+  const handleMatrixApply = (payload: MatrixLineApplyPayload) => {
+    ensureAgentSetupFee(payload.catalogProductId);
+    if (stripeApplyTarget === "new") {
+      const emptyIdx = products.findIndex((p) => !p.productId);
+      if (emptyIdx >= 0) {
+        updateProduct(emptyIdx, {
+          productId: payload.catalogProductId,
+          quantity: payload.quantity,
+          overrideMrr: payload.overrideMrr,
+        });
+      } else {
+        setProducts((prev) => [
+          ...prev,
+          {
+            productId: payload.catalogProductId,
+            quantity: payload.quantity,
+            overrideMrr: payload.overrideMrr,
+          },
+        ]);
+      }
+      return;
+    }
+    const idx = parseInt(stripeApplyTarget, 10);
+    if (!Number.isNaN(idx) && idx >= 0 && idx < products.length) {
+      updateProduct(idx, {
+        productId: payload.catalogProductId,
+        quantity: payload.quantity,
+        overrideMrr: payload.overrideMrr,
+      });
+    }
   };
 
   const addSetupFee = () => {
@@ -279,38 +352,39 @@ const ClientEditSheet = ({
                 </div>
               )}
 
-              {/* Stripe Payment Links */}
-              {(() => {
-                const dealProductIds = new Set(products.map((p) => p.productId).filter(Boolean));
-                const matchedLinks = handoffProductColumns
-                  .flatMap((col) => col.products)
-                  .filter((p) => dealProductIds.has(p.id));
-                if (matchedLinks.length === 0) return null;
-                return (
-                  <div className="space-y-2">
-                    <Label className="flex items-center gap-2">
-                      <CreditCard className="h-4 w-4" />
-                      Charge Customer
-                    </Label>
-                    <div className="flex flex-col gap-2">
-                      {matchedLinks.map((link) => (
-                        <a
-                          key={link.id}
-                          href={link.url}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="flex items-center gap-2 rounded-lg border border-primary/30 bg-primary/5 px-3 py-2.5 text-sm font-semibold text-primary hover:bg-primary/10 transition-colors"
-                        >
-                          <CreditCard className="h-4 w-4 shrink-0" />
-                          Charge via Stripe — {link.name}
-                          <ExternalLink className="h-3.5 w-3.5 shrink-0 ml-auto" />
-                        </a>
+              <div className="space-y-2">
+                <Label className="flex items-center gap-2">
+                  <CreditCard className="h-4 w-4" />
+                  Charge customer (Stripe)
+                </Label>
+                <p className="text-xs text-muted-foreground">
+                  Choose package and line count. Links match your Stripe checkout exactly.
+                </p>
+                <div className="space-y-1.5">
+                  <Label className="text-xs">Apply matrix to</Label>
+                  <Select value={stripeApplyTarget} onValueChange={setStripeApplyTarget}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {stripeApplyOptions.map((o) => (
+                        <SelectItem key={o.value} value={o.value}>
+                          {o.label}
+                        </SelectItem>
                       ))}
-                    </div>
-                    <p className="text-xs text-muted-foreground">Opens Stripe checkout in a new tab.</p>
-                  </div>
-                );
-              })()}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <StripeCheckoutControls
+                  onApplyToLine={handleMatrixApply}
+                  applyTargetLabel="Apply to deal"
+                  className="rounded-lg border border-border bg-secondary/10 p-3"
+                />
+                <p className="text-xs text-muted-foreground">
+                  Agent Broski packages add the matching $1,500 or $2,500 setup fee to this deal when you
+                  apply, if it is not already there.
+                </p>
+              </div>
             </div>
           </div>
 
@@ -395,6 +469,7 @@ const ClientEditSheet = ({
                           updateProduct(index, {
                             productId: v,
                             overrideMrr: null,
+                            quantity: 1,
                           })
                         }
                       >
@@ -404,8 +479,11 @@ const ClientEditSheet = ({
                         <SelectContent>
                           {productCatalog.map((p) => (
                             <SelectItem key={p.id} value={p.id}>
-                              {p.name} ({currency.format(p.commissionableMrr)}
-                              {p.perUnit ? "/unit" : ""})
+                              {p.name} — book default {currency.format(p.commissionableMrr)}
+                              {p.perUnit ? "/unit" : ""}
+                              {p.fixedUpfrontCommissionUsd != null
+                                ? ` · sale ${currency.format(p.fixedUpfrontCommissionUsd)}`
+                                : ""}
                             </SelectItem>
                           ))}
                         </SelectContent>
@@ -422,48 +500,67 @@ const ClientEditSheet = ({
                       </Button>
                     </div>
                     {line.productId && (
-                      <div className="grid grid-cols-2 gap-2">
-                        <div className="space-y-1">
-                          <Label className="text-xs">Qty</Label>
-                          <Input
-                            type="number"
-                            min={1}
-                            value={line.quantity || 1}
-                            onChange={(e) =>
-                              updateProduct(index, {
-                                quantity: Math.max(
-                                  1,
-                                  parseInt(e.target.value, 10) || 1,
-                                ),
-                              })
-                            }
-                          />
+                      <>
+                        <div className="grid grid-cols-2 gap-2">
+                          <div className="space-y-1">
+                            <Label className="text-xs">Qty</Label>
+                            <Input
+                              type="number"
+                              min={1}
+                              value={line.quantity || 1}
+                              onChange={(e) =>
+                                updateProduct(index, {
+                                  quantity: Math.max(
+                                    1,
+                                    parseInt(e.target.value, 10) || 1,
+                                  ),
+                                })
+                              }
+                            />
+                          </div>
+                          <div className="space-y-1">
+                            <Label className="text-xs">
+                              Override MRR {perUnit ? "(per unit)" : ""}
+                              <span className="font-normal text-muted-foreground">
+                                {" "}
+                                — catalog {currency.format(defaultMrr)}
+                                {perUnit ? "/unit" : ""}
+                              </span>
+                            </Label>
+                            <Input
+                              type="number"
+                              min={0}
+                              step={0.01}
+                              placeholder={currency.format(defaultMrr)}
+                              value={
+                                line.overrideMrr != null && line.overrideMrr > 0
+                                  ? String(line.overrideMrr)
+                                  : ""
+                              }
+                              onChange={(e) => {
+                                const v = parseFloat(e.target.value);
+                                updateProduct(index, {
+                                  overrideMrr:
+                                    !Number.isNaN(v) && v > 0 ? v : null,
+                                });
+                              }}
+                            />
+                          </div>
                         </div>
-                        <div className="space-y-1">
-                          <Label className="text-xs">
-                            MRR {perUnit ? "(per unit)" : ""} — default{" "}
-                            {currency.format(defaultMrr)}
-                          </Label>
-                          <Input
-                            type="number"
-                            min={0}
-                            step={0.01}
-                            placeholder={currency.format(defaultMrr)}
-                            value={
-                              line.overrideMrr != null && line.overrideMrr > 0
-                                ? String(line.overrideMrr)
-                                : ""
-                            }
-                            onChange={(e) => {
-                              const v = parseFloat(e.target.value);
-                              updateProduct(index, {
-                                overrideMrr:
-                                  !Number.isNaN(v) && v > 0 ? v : null,
-                              });
-                            }}
-                          />
-                        </div>
-                      </div>
+                        <p className="text-xs font-medium text-muted-foreground">
+                          Line total (book MRR):{" "}
+                          {currency.format(
+                            resolveCommissionableMrr({
+                              productId: line.productId,
+                              quantity: Math.max(line.quantity || 1, 1),
+                              overrideMrr:
+                                line.overrideMrr != null && line.overrideMrr > 0
+                                  ? line.overrideMrr
+                                  : null,
+                            }),
+                          )}
+                        </p>
+                      </>
                     )}
                   </div>
                 );

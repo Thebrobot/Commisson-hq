@@ -8,8 +8,8 @@ interface QuickSimProps {
 const QuickSim = ({ currentMRR = 12400 }: QuickSimProps) => {
   // Simulate selling one of each hot product
   const scenarios = [
-    { product: "AI Growth", mrc: 697, newMRR: currentMRR + 697 },
-    { product: "AI Receptionist", mrc: 497, newMRR: currentMRR + 497 },
+    { product: "Agent Broski (Ai Receptionist)", mrc: 852, newMRR: currentMRR + 852 },
+    { product: "Agent Broski (Ai Voice + SMS)", mrc: 1042, newMRR: currentMRR + 1042 },
     { product: "Brobot One Core", mrc: 297, newMRR: currentMRR + 297 },
   ];
 

@@ -69,12 +69,20 @@ const InteractiveCalc = ({ currentMRR = 12400 }: InteractiveCalcProps) => {
     INITIAL_PRODUCTS.map((id) => defaultLineItem(id)),
   );
   const [setupFeeItems, setSetupFeeItems] = useState<SetupFeeItem[]>(() => [
-    { id: crypto.randomUUID(), feeId: "deployment_standard", amount: "1500" },
+    { id: crypto.randomUUID(), feeId: "agent_broski_receptionist_setup", amount: "1500" },
   ]);
 
   const result = useMemo(() => {
     const products = lineItems.map((item) => {
       const product = productCatalog.find((p) => p.id === item.productId);
+      /** Package SKUs with fixedUpfrontCommissionUsd: line count ignored in sim. */
+      if (product?.fixedUpfrontCommissionUsd != null) {
+        return {
+          productId: item.productId,
+          quantity: 1,
+          overrideMrr: null,
+        };
+      }
       const parsedOverride = item.overrideMrr ? Number(item.overrideMrr) : null;
       return {
         productId: item.productId,
@@ -137,7 +145,18 @@ const InteractiveCalc = ({ currentMRR = 12400 }: InteractiveCalcProps) => {
 
   const updateLineItem = (id: string, updates: Partial<LineItem>) => {
     setLineItems((prev) =>
-      prev.map((item) => (item.id === id ? { ...item, ...updates } : item)),
+      prev.map((item) => {
+        if (item.id !== id) return item;
+        const next = { ...item, ...updates };
+        if (updates.productId != null) {
+          const p = productCatalog.find((x) => x.id === updates.productId);
+          if (p?.fixedUpfrontCommissionUsd != null) {
+            next.quantity = 1;
+            next.overrideMrr = "";
+          }
+        }
+        return next;
+      }),
     );
   };
 
@@ -157,7 +176,7 @@ const InteractiveCalc = ({ currentMRR = 12400 }: InteractiveCalcProps) => {
 
   const reset = () => {
     setLineItems(INITIAL_PRODUCTS.map((id) => defaultLineItem(id)));
-    setSetupFeeItems([{ id: crypto.randomUUID(), feeId: "deployment_standard", amount: "1500" }]);
+    setSetupFeeItems([{ id: crypto.randomUUID(), feeId: "agent_broski_receptionist_setup", amount: "1500" }]);
   };
 
   const tierDisplay =
@@ -184,7 +203,9 @@ const InteractiveCalc = ({ currentMRR = 12400 }: InteractiveCalcProps) => {
                 Deal impact simulator
               </h2>
               <p className="mt-0.5 text-sm leading-relaxed text-muted-foreground">
-                Simulate your commission using the product catalog, setup fees, and residual tiers.
+                For Brobot One and Agent Broski, line count does not change your sale commission in
+                this simulator. Other products use qty and optional MRR override. Setup fees and
+                residual tiers apply as usual.
               </p>
             </div>
           </div>
@@ -213,6 +234,7 @@ const InteractiveCalc = ({ currentMRR = 12400 }: InteractiveCalcProps) => {
               const product =
                 productCatalog.find((p) => p.id === item.productId) ?? productCatalog[0];
               const defaultMrr = currency.format(product.commissionableMrr);
+              const isPackageSaleFixed = product.fixedUpfrontCommissionUsd != null;
 
               return (
                 <div
@@ -234,19 +256,32 @@ const InteractiveCalc = ({ currentMRR = 12400 }: InteractiveCalcProps) => {
                       ))}
                     </SelectContent>
                   </Select>
-                  <input
-                    aria-label="Quantity"
-                    type="number"
-                    min={1}
-                    value={item.quantity}
-                    onChange={(e) =>
-                      updateLineItem(item.id, {
-                        quantity: Math.max(Number(e.target.value) || 1, 1),
-                      })
-                    }
-                    className="h-9 w-14 min-w-[3.5rem] rounded-md border border-border bg-card px-2 text-center text-sm text-foreground outline-none ring-offset-background transition focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-                  />
-                  {product.allowOverride ? (
+                  {isPackageSaleFixed ? (
+                    <span
+                      className="flex h-9 min-w-[5.5rem] items-center justify-center rounded-md border border-border bg-secondary/30 px-2 text-center text-xs font-medium text-muted-foreground"
+                      title="Line count does not change your sale commission in this simulator"
+                    >
+                      1 sale
+                    </span>
+                  ) : (
+                    <input
+                      aria-label="Quantity"
+                      type="number"
+                      min={1}
+                      value={item.quantity}
+                      onChange={(e) =>
+                        updateLineItem(item.id, {
+                          quantity: Math.max(Number(e.target.value) || 1, 1),
+                        })
+                      }
+                      className="h-9 w-14 min-w-[3.5rem] rounded-md border border-border bg-card px-2 text-center text-sm text-foreground outline-none ring-offset-background transition focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                    />
+                  )}
+                  {isPackageSaleFixed ? (
+                    <span className="flex min-w-[5rem] flex-1 items-center rounded-md border border-border bg-primary/5 px-2.5 py-1.5 text-sm font-semibold text-primary">
+                      {currency.format(product.fixedUpfrontCommissionUsd!)}
+                    </span>
+                  ) : product.allowOverride ? (
                     <input
                       aria-label="Override MRR"
                       type="number"

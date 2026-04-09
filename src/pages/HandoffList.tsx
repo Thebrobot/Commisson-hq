@@ -1,7 +1,7 @@
 import { useMemo } from "react";
 import { Link } from "react-router-dom";
 import { motion, useReducedMotion } from "framer-motion";
-import { ExternalLink, ClipboardCheck, AlertCircle, Check, ChevronRight, ChevronDown } from "lucide-react";
+import { CreditCard, ExternalLink, ClipboardCheck, AlertCircle, Check, ChevronRight, ChevronDown } from "lucide-react";
 import {
   Collapsible,
   CollapsibleContent,
@@ -15,6 +15,7 @@ import {
   isHandoffComplete,
 } from "@/lib/handoff";
 import { useDashboard } from "@/providers/DashboardProvider";
+import { StripeCheckoutControls } from "@/components/dashboard/StripeCheckoutControls";
 
 const HandoffList = () => {
   const reduceMotion = useReducedMotion();
@@ -238,10 +239,36 @@ const HandoffList = () => {
         </div>
       </section>
 
-      {/* Section 3: Order links — reference, de-emphasized */}
+      {/* Brobot & Agent — package × lines Stripe */}
       <section className="relative">
         <h3 className="mb-4 text-sm font-bold uppercase tracking-[0.15em] text-muted-foreground">
-          Order links
+          Brobot & Agent checkout
+        </h3>
+        <motion.div
+          initial={reduceMotion ? false : { opacity: 0, y: 8 }}
+          animate={reduceMotion ? undefined : { opacity: 1, y: 0 }}
+          transition={{ delay: 0.12 }}
+          className="rounded-2xl border border-border bg-card/80 p-4 sm:p-5"
+        >
+          <div className="mb-3 flex items-center gap-2 text-foreground">
+            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary/15 text-primary">
+              <CreditCard className="h-4 w-4" />
+            </div>
+            <div>
+              <p className="text-sm font-semibold">Package & line count</p>
+              <p className="text-xs text-muted-foreground">
+                Pick the same options you use in Stripe — links open in a new tab.
+              </p>
+            </div>
+          </div>
+          <StripeCheckoutControls />
+        </motion.div>
+      </section>
+
+      {/* Section 3: Order links — reference, de-emphasized */}
+      <section className="relative mt-10">
+        <h3 className="mb-4 text-sm font-bold uppercase tracking-[0.15em] text-muted-foreground">
+          Other order links
         </h3>
         <div className="grid grid-cols-1 gap-6 sm:grid-cols-3">
           {handoffProductColumns.map((column, colIdx) => (

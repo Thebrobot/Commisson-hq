@@ -19,6 +19,8 @@ export interface ProductCatalogItem {
   commissionableMrr: number;
   allowOverride: boolean;
   perUnit: boolean;
+  /** Sale commission uses this fixed USD for the line instead of commissionable MRR (matrix packages). */
+  fixedUpfrontCommissionUsd?: number;
 }
 
 export interface SetupFeeCatalogItem {

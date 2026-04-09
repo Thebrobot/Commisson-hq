@@ -42,15 +42,8 @@ export interface ProductLinkColumn {
   products: ProductLinkItem[];
 }
 
-/** Product links grouped by product family (columns). */
+/** Brobot One & Agent Broski checkouts use the matrix in `stripeCheckoutMatrix.ts`. */
 export const handoffProductColumns: ProductLinkColumn[] = [
-  {
-    title: "Brobot One",
-    products: [
-      { id: "brobot-one-basic", name: "Brobot One Basic", url: "https://buy.stripe.com/4gM7sM5MU9KH2NBfYb6sw1P", icon: Package },
-      { id: "brobot-one-core", name: "Brobot One Core", url: "https://buy.stripe.com/6oU3cwa3a8GD2NB3bp6sw1O", icon: Package },
-    ],
-  },
   {
     title: "RevuBro",
     products: [

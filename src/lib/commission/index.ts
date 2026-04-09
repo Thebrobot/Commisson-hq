@@ -263,7 +263,13 @@ export function calcDealCommission(deal: Deal, now = new Date()): DealCommission
   }
 
   const mrr = deal.products.reduce((sum, item) => sum + resolveCommissionableMrr(item), 0);
-  const upfrontCommission = mrr;
+  const upfrontCommission = deal.products.reduce((sum, item) => {
+    const product = getProductById(item.productId);
+    if (product?.fixedUpfrontCommissionUsd != null) {
+      return sum + product.fixedUpfrontCommissionUsd;
+    }
+    return sum + resolveCommissionableMrr(item);
+  }, 0);
   const setupCommission = deal.setupFees.reduce((sum, feeLine) => {
     const fee = getSetupFeeById(feeLine.type);
     if (!fee) {

@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { motion, useReducedMotion } from "framer-motion";
 import { NavLink, useNavigate } from "react-router-dom";
-import { ChevronDown, ExternalLink, Flame, Menu, Plus, Settings, UserPlus, X } from "lucide-react";
+import { ChevronDown, CreditCard, ExternalLink, Flame, Menu, Plus, Settings, UserPlus, X } from "lucide-react";
 import SettingsSheet from "@/components/dashboard/SettingsSheet";
 import RepAvatar from "@/components/dashboard/RepAvatar";
 import { Button } from "@/components/ui/button";
@@ -16,6 +16,13 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { StripeCheckoutControls } from "@/components/dashboard/StripeCheckoutControls";
 import { handoffTools } from "@/data/handoffTools";
 import { handoffToolItems, handoffProductColumns } from "@/data/handoffToolbox";
 import ThemeToggle from "@/components/dashboard/ThemeToggle";
@@ -45,6 +52,7 @@ const DashboardHeader = () => {
   const navigate = useNavigate();
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [stripeCheckoutOpen, setStripeCheckoutOpen] = useState(false);
   const { reps, selectedRepId, setSelectedRepId } = useDashboard();
   const selectedRep = reps.find((rep) => rep.id === selectedRepId) ?? null;
   const selectedLabel = selectedRepId === "all" ? "Team board" : selectedRep?.name ?? "Rep view";
@@ -195,7 +203,27 @@ const DashboardHeader = () => {
                   );
                 })}
                 <DropdownMenuSeparator className="col-span-2 mx-0 bg-border md:col-span-2" />
-                <DropdownMenuLabel className="col-span-2 px-2 pb-1 pt-0 text-xs uppercase tracking-[0.2em] text-muted-foreground md:col-span-2">Order links</DropdownMenuLabel>
+                <DropdownMenuLabel className="col-span-2 px-2 pb-1 pt-0 text-xs uppercase tracking-[0.2em] text-muted-foreground md:col-span-2">
+                  Brobot & Agent checkout
+                </DropdownMenuLabel>
+                <DropdownMenuItem
+                  className="col-span-2 flex cursor-pointer items-start gap-3 rounded-lg px-3 py-2.5 focus:bg-secondary/70 focus:text-foreground md:col-span-2"
+                  onSelect={() => {
+                    setTimeout(() => setStripeCheckoutOpen(true), 0);
+                  }}
+                >
+                  <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary text-primary-foreground">
+                    <CreditCard className="h-4 w-4" />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm font-semibold">Package & line count</p>
+                    <p className="mt-0.5 text-xs text-muted-foreground">
+                      Opens the right Stripe link for Brobot One Basic, Core, or Agent Broski.
+                    </p>
+                  </div>
+                </DropdownMenuItem>
+                <DropdownMenuSeparator className="col-span-2 mx-0 bg-border md:col-span-2" />
+                <DropdownMenuLabel className="col-span-2 px-2 pb-1 pt-0 text-xs uppercase tracking-[0.2em] text-muted-foreground md:col-span-2">Other order links</DropdownMenuLabel>
                 {handoffProductColumns.flatMap((col) => col.products).map((product) => {
                   const Icon = product.icon;
                   return (
@@ -384,6 +412,18 @@ const DashboardHeader = () => {
           </div>
         </SheetContent>
       </Sheet>
+
+      <Dialog open={stripeCheckoutOpen} onOpenChange={setStripeCheckoutOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Brobot & Agent — Stripe checkout</DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-muted-foreground">
+            Select package and number of lines, then open checkout. URLs match Stripe exactly.
+          </p>
+          <StripeCheckoutControls />
+        </DialogContent>
+      </Dialog>
 
       <SettingsSheet open={settingsOpen} onOpenChange={setSettingsOpen} />
     </motion.header>
