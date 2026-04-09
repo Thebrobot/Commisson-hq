@@ -45,12 +45,15 @@ const Login = () => {
     setSuccess(null);
     setLoading(true);
     try {
+      const appBase =
+        (import.meta.env.VITE_APP_URL as string | undefined)?.replace(/\/$/, "") ||
+        window.location.origin;
       const { data, error } = await supabase.auth.signUp({
         email,
         password,
         options: {
           data: { full_name: name.trim() || email.split("@")[0] },
-          emailRedirectTo: `${window.location.origin}/`,
+          emailRedirectTo: `${appBase}/`,
         },
       });
       if (error) throw error;

@@ -1,12 +1,61 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
 import { createClient } from "@supabase/supabase-js";
 
+/** Hosts we never put in invite emails (managers on local dev shouldn’t send localhost links). */
+function isPublicDeployHost(urlString: string): boolean {
+  try {
+    const u = new URL(urlString);
+    const h = u.hostname.toLowerCase();
+    if (h === "localhost" || h === "127.0.0.1") return false;
+    if (h.endsWith(".local")) return false;
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function normalizeRedirectBase(raw: string | undefined): string | undefined {
+  const t = raw?.trim();
+  if (!t) return undefined;
+  const withProto = /^https?:\/\//i.test(t) ? t : `https://${t}`;
+  const base = withProto.replace(/\/$/, "");
+  if (!isPublicDeployHost(`${base}/`)) return undefined;
+  return `${base}/`;
+}
+
+/**
+ * Prefer env / Vercel host over Origin so managers testing from localhost don’t put local URLs in emails.
+ */
+function resolveInviteRedirectTo(req: VercelRequest): string | undefined {
+  const fromEnv =
+    normalizeRedirectBase(process.env.APP_URL) ??
+    normalizeRedirectBase(process.env.SITE_URL) ??
+    normalizeRedirectBase(process.env.VITE_APP_URL);
+
+  if (fromEnv) return fromEnv;
+
+  if (process.env.VERCEL_URL) {
+    const v = normalizeRedirectBase(`https://${process.env.VERCEL_URL.replace(/^https?:\/\//i, "")}`);
+    if (v) return v;
+  }
+
+  const origin = req.headers.origin?.trim();
+  if (origin && /^https?:\/\//i.test(origin) && isPublicDeployHost(origin)) {
+    return `${origin.replace(/\/$/, "")}/`;
+  }
+
+  return undefined;
+}
+
 /**
  * Sends a Supabase Auth invite email so the new rep/partner can set a password and sign in.
  * Only callers whose rep row is role=manager for the same tenant as the target rep may invite.
  *
  * Env: SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY
- * Supabase Dashboard → Authentication → URL Configuration: add your production URL to Redirect URLs.
+ * Set APP_URL (or SITE_URL) on Vercel to your live site, e.g. https://commisson-hq.vercel.app
+ * so invite links are never localhost even if you add reps from a local dev session.
+ *
+ * Supabase Dashboard → Authentication → URL Configuration: Site URL = production; add Redirect URLs.
  */
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method !== "POST") {
@@ -64,15 +113,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return res.status(404).json({ error: "Rep not found in your organization" });
     }
 
-    const originHeader = req.headers.origin;
-    let redirectTo: string | undefined;
-    if (originHeader && /^https?:\/\//i.test(originHeader)) {
-      redirectTo = `${originHeader.replace(/\/$/, "")}/`;
-    } else if (process.env.VITE_APP_URL) {
-      redirectTo = `${String(process.env.VITE_APP_URL).replace(/\/$/, "")}/`;
-    } else if (process.env.VERCEL_URL) {
-      redirectTo = `https://${process.env.VERCEL_URL.replace(/\/$/, "")}/`;
-    }
+    const redirectTo = resolveInviteRedirectTo(req);
 
     const { error: inviteError } = await admin.auth.admin.inviteUserByEmail(normalized, {
       data: { full_name: (targetRep.name as string)?.trim() || normalized.split("@")[0] },
