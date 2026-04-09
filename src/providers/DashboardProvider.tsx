@@ -47,6 +47,8 @@ interface DashboardContextValue {
   deleteDeal: (dealId: string) => Promise<void>;
   updateDeal: (dealId: string, updates: Partial<Deal>) => Promise<void>;
   updateRepProfile: (repId: string, updates: { name?: string; email?: string; avatar?: string; role?: "rep" | "manager" | "partner" }) => Promise<void>;
+  /** Managers only. Removes rep row; blocked if they have deals or are the only manager / yourself. */
+  deleteRep: (repId: string) => Promise<void>;
   myRepId: string | null;
   team: ReturnType<typeof aggregateTeam>;
   selectedSummary: ReturnType<typeof aggregateRepDeals> | null;
@@ -425,6 +427,57 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
     return { rep: newRep, inviteSent, inviteNote };
   }, [tenantId]);
 
+  const deleteRep = useCallback(
+    async (repId: string) => {
+      if (repId === myRepId) {
+        throw new Error("You can't remove your own account from the team list.");
+      }
+      const target = repsRaw.find((r) => r.id === repId);
+      if (!target) {
+        throw new Error("Rep not found.");
+      }
+      if (target.role === "manager") {
+        const managerCount = repsRaw.filter((r) => r.role === "manager").length;
+        if (managerCount <= 1) {
+          throw new Error("You can't remove the only manager. Promote someone else to manager first.");
+        }
+      }
+      const dealCount = deals.filter((d) => d.repId === repId).length;
+      if (dealCount > 0) {
+        throw new Error(
+          `This person has ${dealCount} client deal(s). Reassign those clients to another rep or delete the deals first.`,
+        );
+      }
+
+      const { data, error } = await supabase.from("reps").delete().eq("id", repId).select("id");
+      if (error) {
+        console.error("[deleteRep]", error);
+        if (error.code === "42501" || /row-level security|RLS/i.test(error.message)) {
+          throw new Error(
+            "Delete blocked by database security. Run supabase-reps-delete-policy.sql in the Supabase SQL Editor.",
+          );
+        }
+        if (/foreign key|violates|referenced/i.test(error.message)) {
+          throw new Error("Can't delete: this rep is still linked to other records in the database.");
+        }
+        throw new Error(error.message || "Failed to delete rep");
+      }
+      if (!data?.length) {
+        throw new Error(
+          "Delete blocked or rep was already removed. If this persists, add the rep delete RLS policy in Supabase.",
+        );
+      }
+
+      setRepsRaw((prev) => prev.filter((r) => r.id !== repId));
+      setSelectedRepIdState((prev) => {
+        if (prev !== repId) return prev;
+        window.localStorage.setItem(STORAGE_KEY, "all");
+        return "all";
+      });
+    },
+    [myRepId, repsRaw, deals],
+  );
+
   const reps = useMemo(() => repsRaw, [repsRaw]);
 
   const team = useMemo(() => aggregateTeam(reps, deals), [reps, deals]);
@@ -461,6 +514,7 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
       deleteDeal,
       updateDeal,
       updateRepProfile,
+      deleteRep,
       addRep,
       myRepId,
       team,
@@ -497,6 +551,7 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
       team,
       updateDeal,
       updateRepProfile,
+      deleteRep,
     ],
   );
 

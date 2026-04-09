@@ -1,11 +1,20 @@
 import { useState } from "react";
 import { motion, useReducedMotion } from "framer-motion";
-import { Handshake, Plus, Shield, ShieldCheck, Users } from "lucide-react";
+import { Handshake, Plus, Shield, ShieldCheck, Trash2, Users } from "lucide-react";
 import { currency } from "@/lib/commission";
 import { useDashboard } from "@/providers/DashboardProvider";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import {
+  AlertDialog,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import {
   Dialog,
   DialogContent,
@@ -39,10 +48,13 @@ interface AddRepState {
 
 export default function Reps() {
   const reduceMotion = useReducedMotion();
-  const { reps, team, updateRepProfile, addRep, isPortalManager } = useDashboard();
+  const { reps, team, deals, updateRepProfile, addRep, deleteRep, isPortalManager, myRepId } =
+    useDashboard();
   const [editState, setEditState] = useState<EditRepState | null>(null);
   const [addState, setAddState] = useState<AddRepState | null>(null);
+  const [repToDelete, setRepToDelete] = useState<Rep | null>(null);
   const [saving, setSaving] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
   const repStats = team.reps.reduce(
     (acc, r) => {
@@ -130,6 +142,20 @@ export default function Reps() {
     }
   };
 
+  const handleConfirmDeleteRep = async () => {
+    if (!repToDelete) return;
+    setDeleting(true);
+    try {
+      await deleteRep(repToDelete.id);
+      toast.success(`${repToDelete.name} was removed from the team.`);
+      setRepToDelete(null);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to remove rep");
+    } finally {
+      setDeleting(false);
+    }
+  };
+
   if (!isPortalManager) {
     return (
       <div className="flex flex-col items-center justify-center py-20 gap-4 text-center">
@@ -179,6 +205,7 @@ export default function Reps() {
           const stats = repStats[rep.id];
           const isManager = rep.role === "manager";
           const isPartner = rep.role === "partner";
+          const isSelf = rep.id === myRepId;
           return (
             <motion.div
               key={rep.id}
@@ -253,14 +280,22 @@ export default function Reps() {
                 </div>
               )}
 
-              <Button
-                variant="outline"
-                size="sm"
-                className="w-full mt-auto"
-                onClick={() => openEdit(rep)}
-              >
-                Edit Profile
-              </Button>
+              <div className="mt-auto flex flex-col gap-2">
+                <Button variant="outline" size="sm" className="w-full" onClick={() => openEdit(rep)}>
+                  Edit Profile
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="w-full gap-2 border-destructive/40 text-destructive hover:bg-destructive/10 hover:text-destructive"
+                  disabled={isSelf}
+                  title={isSelf ? "You can't remove yourself here" : "Remove from team"}
+                  onClick={() => setRepToDelete(rep)}
+                >
+                  <Trash2 className="h-4 w-4" />
+                  Remove from team
+                </Button>
+              </div>
             </motion.div>
           );
         })}
@@ -277,6 +312,38 @@ export default function Reps() {
           </Button>
         </div>
       )}
+
+      <AlertDialog open={repToDelete !== null} onOpenChange={(open) => !open && setRepToDelete(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Remove {repToDelete?.name} from the team?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This deletes their profile in Commission HQ. They will lose access to the dashboard. Their Supabase
+              login may still exist unless you remove the user under Authentication in Supabase.
+              {repToDelete && deals.filter((d) => d.repId === repToDelete.id).length > 0 ? (
+                <span className="mt-2 block font-medium text-destructive">
+                  This person still has client deals — remove is blocked until those are reassigned or deleted.
+                </span>
+              ) : null}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deleting}>Cancel</AlertDialogCancel>
+            <Button
+              variant="destructive"
+              disabled={
+                deleting ||
+                !repToDelete ||
+                repToDelete.id === myRepId ||
+                deals.filter((d) => d.repId === repToDelete.id).length > 0
+              }
+              onClick={() => void handleConfirmDeleteRep()}
+            >
+              {deleting ? "Removing…" : "Remove"}
+            </Button>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       {/* Edit Rep Dialog */}
       <Dialog open={editState !== null} onOpenChange={(open) => !open && setEditState(null)}>
