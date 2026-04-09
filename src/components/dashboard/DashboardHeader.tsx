@@ -26,14 +26,18 @@ const navItems = [
   { label: "Dashboard", path: "/" },
   { label: "Active Clients", path: "/clients" },
   { label: "Handoff Hub", path: "/handoff" },
-  { label: "Bag Calc", path: "/commissions" },
+  { label: "Earnings Lab", path: "/commissions" },
+  { label: "Analytics", path: "/analytics" },
+  { label: "Reps", path: "/reps" },
 ];
 
 const navItemsMobile = [
   { label: "Dashboard", path: "/" },
   { label: "Clients", path: "/clients" },
   { label: "Handoff Hub", path: "/handoff" },
-  { label: "Bag Calc", path: "/commissions" },
+  { label: "Earnings Lab", path: "/commissions" },
+  { label: "Analytics", path: "/analytics" },
+  { label: "Reps", path: "/reps" },
 ];
 
 const DashboardHeader = () => {

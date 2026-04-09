@@ -13,7 +13,10 @@ import Clients from "@/pages/Clients";
 import HandoffKit from "@/pages/HandoffKit";
 import HandoffList from "@/pages/HandoffList";
 import Commission from "@/pages/Commission";
+import Analytics from "@/pages/Analytics";
+import Reps from "@/pages/Reps";
 import Login from "@/pages/Login";
+import NotFound from "@/pages/NotFound";
 
 function LoginRoute() {
   const { user, loading } = useAuth();
@@ -99,6 +102,9 @@ function ProtectedRoutes() {
             <Route path="clients/:dealId/handoff" element={<HandoffKit />} />
             <Route path="handoff" element={<HandoffList />} />
             <Route path="commissions" element={<Commission />} />
+            <Route path="analytics" element={<Analytics />} />
+            <Route path="reps" element={<Reps />} />
+            <Route path="*" element={<NotFound />} />
           </Route>
         </Routes>
       </NotificationProvider>

@@ -16,6 +16,7 @@ import {
 } from "@/lib/commission";
 import { defaultHandoff } from "@/lib/handoff";
 import { supabase } from "@/lib/supabase";
+import { toast } from "sonner";
 import { dealToSupabase, mapDealRow, mapRepRow } from "@/lib/supabase-mappers";
 import type { Deal, Rep, ViewScope } from "@/types/commission";
 
@@ -33,6 +34,7 @@ interface DashboardContextValue {
   selectedRep: Rep | null;
   setSelectedRepId: (value: ViewScope) => void;
   addDeal: (partial?: Partial<Omit<Deal, "id">>) => Promise<Deal | null>;
+  addRep: (data: { name: string; email: string; role: "rep" | "manager" }) => Promise<Rep | null>;
   markDealPaid: (dealId: string) => Promise<void>;
   cancelDeal: (dealId: string) => Promise<void>;
   deleteDeal: (dealId: string) => Promise<void>;
@@ -235,13 +237,22 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const deleteDeal = useCallback(async (dealId: string) => {
-    const { error: deleteError } = await supabase
+    const { data, error: deleteError } = await supabase
       .from("deals")
       .delete()
-      .eq("id", dealId);
+      .eq("id", dealId)
+      .select("id");
 
     if (deleteError) {
       console.error("[deleteDeal]", deleteError);
+      toast.error("Could not delete. " + (deleteError.message || "Try again."));
+      return;
+    }
+
+    if (!data || data.length === 0) {
+      toast.error(
+        "Delete blocked. Run the SQL in supabase-deals-delete-policy.sql in your Supabase SQL Editor to enable deletes."
+      );
       return;
     }
 
@@ -264,6 +275,7 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
     if (updates.paidOut !== undefined) row.paid_out = updates.paidOut;
     if (updates.paidOutAt !== undefined) row.paid_out_at = updates.paidOutAt;
     if (updates.handoff !== undefined) row.handoff = updates.handoff ?? {};
+    if (updates.notes !== undefined) row.notes = updates.notes ?? null;
 
     const { error: updateError } = await supabase.from("deals").update(row).eq("id", dealId);
 
@@ -323,6 +335,25 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
     );
   }, [myRepId]);
 
+  const addRep = useCallback(async (data: { name: string; email: string; role: "rep" | "manager" }) => {
+    if (!tenantId) return null;
+    const row = {
+      tenant_id: tenantId,
+      name: data.name.trim(),
+      email: data.email.trim().toLowerCase(),
+      role: data.role,
+      avatar: "",
+    };
+    const { data: inserted, error } = await supabase.from("reps").insert(row).select("id, tenant_id, name, email, avatar, role, auth_user_id, created_at").single();
+    if (error) {
+      console.error("[addRep]", error);
+      throw new Error(error.message || "Failed to add rep");
+    }
+    const newRep: RepWithTenant = { ...mapRepRow(inserted), tenantId: inserted.tenant_id, authUserId: inserted.auth_user_id ?? null };
+    setRepsRaw((prev) => [...prev, newRep]);
+    return newRep;
+  }, [tenantId]);
+
   const reps = useMemo(() => repsRaw, [repsRaw]);
 
   const team = useMemo(() => aggregateTeam(reps, deals), [reps, deals]);
@@ -359,6 +390,7 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
       deleteDeal,
       updateDeal,
       updateRepProfile,
+      addRep,
       myRepId,
       team,
       selectedSummary,
@@ -370,6 +402,7 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
     }),
     [
       addDeal,
+      addRep,
       cancelDeal,
       deleteDeal,
       deals,

@@ -381,6 +381,7 @@ export function aggregateRepDeals(rep: Rep, deals: Deal[], now = new Date()): Re
     .filter(({ deal }) => payingDeals.includes(deal))
     .reduce((sum, entry) => sum + entry.summary.mrr, 0);
 
+  const cancelledCount = deals.filter((d) => d.status === "cancelled").length;
   const lastMonthPayout = getLastMonthPayout(deals, now);
 
   return {
@@ -397,6 +398,7 @@ export function aggregateRepDeals(rep: Rep, deals: Deal[], now = new Date()): Re
     payingClientCount,
     closedThisMonthCount,
     onTrialCount,
+    cancelledCount,
     tier,
     nextTier,
     residualMonthly,

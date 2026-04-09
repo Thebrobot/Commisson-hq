@@ -1,7 +1,7 @@
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useCallback, useEffect } from "react";
 import { useLocation, useNavigate, Link } from "react-router-dom";
 import { motion, useReducedMotion } from "framer-motion";
-import { AlertCircle, Check, Info, Users } from "lucide-react";
+import { AlertCircle, ArrowUpDown, Check, Download, Info, Search, Users } from "lucide-react";
 import {
   calcDealCommission,
   currency,
@@ -22,6 +22,7 @@ import {
 import { payoutConfig } from "@/data/catalog/commission";
 import { useDashboard } from "@/providers/DashboardProvider";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import {
   Table,
   TableBody,
@@ -41,7 +42,43 @@ import ClientEditSheet from "@/components/dashboard/ClientEditSheet";
 import ClientCard from "@/components/dashboard/ClientCard";
 import type { DealFeedItem } from "@/types/commission";
 
-type AvailabilityFilter = "all" | "trial" | "in_lag" | "ready";
+type AvailabilityFilter = "all" | "trial" | "in_lag" | "ready" | "cancelled";
+type SortKey = "closeDate" | "clientName" | "commission" | "mrr" | "payoutDate";
+type SortDir = "asc" | "desc";
+
+function exportToCSV(items: DealFeedItem[]) {
+  const headers = [
+    "Client Name", "Rep", "Services", "Status", "Close Date",
+    "First Payment", "Payout Date", "MRR", "Commission", "Paid",
+  ];
+  const rows = items.map((item) => {
+    const productNames = item.deal.products
+      .map((li) => getProductById(li.productId)?.name ?? li.productId)
+      .join(" | ");
+    const isCancelled = item.deal.status === "cancelled";
+    const summary = calcDealCommission(item.deal);
+    return [
+      item.deal.clientName,
+      item.rep.name,
+      productNames || "Setup-only",
+      item.deal.status,
+      item.deal.closeDate,
+      item.deal.firstPaymentDate ?? "",
+      summary.payoutDate.toISOString().slice(0, 10),
+      isCancelled ? `-${summary.mrr}` : String(summary.mrr),
+      String(summary.totalCommission),
+      item.deal.paidOut ? "Yes" : "No",
+    ].map((v) => `"${String(v).replace(/"/g, '""')}"`).join(",");
+  });
+  const csv = [headers.join(","), ...rows].join("\n");
+  const blob = new Blob([csv], { type: "text/csv" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `clients-${new Date().toISOString().slice(0, 10)}.csv`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
 
 const Clients = () => {
   const reduceMotion = useReducedMotion();
@@ -50,6 +87,17 @@ const Clients = () => {
   const { deals, reps, selectedRepId, setSelectedRepId, team, selectedSummary, selectedRep, updateDeal, addDeal, cancelDeal, deleteDeal, loading } = useDashboard();
   const [selectedItem, setSelectedItem] = useState<DealFeedItem | null>(null);
   const [availabilityFilter, setAvailabilityFilter] = useState<AvailabilityFilter>("all");
+  const [search, setSearch] = useState("");
+  const [sortKey, setSortKey] = useState<SortKey>("closeDate");
+  const [sortDir, setSortDir] = useState<SortDir>("desc");
+
+  const handleSort = useCallback((key: SortKey) => {
+    setSortKey((prev) => {
+      if (prev === key) setSortDir((d) => d === "asc" ? "desc" : "asc");
+      else setSortDir("desc");
+      return key;
+    });
+  }, []);
 
   useEffect(() => {
     const state = location.state as { openNewClient?: boolean; openDealId?: string } | null;
@@ -95,12 +143,69 @@ const Clients = () => {
   }, [deals, reps, selectedRepId]);
 
   const filteredItems = useMemo(() => {
-    if (availabilityFilter === "all") return clientItems;
-    return clientItems.filter((item) => {
-      const status = getCommissionStatus(item.deal, item.summary);
-      return status === availabilityFilter;
+    let items = clientItems;
+
+    // Filter by status
+    if (availabilityFilter !== "all") {
+      if (availabilityFilter === "cancelled") {
+        items = items.filter((item) => item.deal.status === "cancelled");
+      } else {
+        items = items.filter((item) => {
+          if (item.deal.status === "cancelled") return false;
+          const status = getCommissionStatus(item.deal, item.summary);
+          return status === availabilityFilter;
+        });
+      }
+    }
+
+    // Filter by search
+    if (search.trim()) {
+      const q = search.trim().toLowerCase();
+      items = items.filter(
+        (item) =>
+          item.deal.clientName.toLowerCase().includes(q) ||
+          item.rep.name.toLowerCase().includes(q) ||
+          (item.deal.clientEmail ?? "").toLowerCase().includes(q) ||
+          (item.deal.clientPhone ?? "").toLowerCase().includes(q) ||
+          item.deal.products.some((li) =>
+            (getProductById(li.productId)?.name ?? li.productId).toLowerCase().includes(q),
+          ),
+      );
+    }
+
+    // Sort
+    items = [...items].sort((a, b) => {
+      let aVal: number | string = 0;
+      let bVal: number | string = 0;
+      switch (sortKey) {
+        case "closeDate":
+          aVal = a.deal.closeDate;
+          bVal = b.deal.closeDate;
+          break;
+        case "clientName":
+          aVal = a.deal.clientName.toLowerCase();
+          bVal = b.deal.clientName.toLowerCase();
+          break;
+        case "commission":
+          aVal = a.summary.totalCommission;
+          bVal = b.summary.totalCommission;
+          break;
+        case "mrr":
+          aVal = a.summary.mrr;
+          bVal = b.summary.mrr;
+          break;
+        case "payoutDate":
+          aVal = a.summary.payoutDate.getTime();
+          bVal = b.summary.payoutDate.getTime();
+          break;
+      }
+      if (aVal < bVal) return sortDir === "asc" ? -1 : 1;
+      if (aVal > bVal) return sortDir === "asc" ? 1 : -1;
+      return 0;
     });
-  }, [clientItems, availabilityFilter]);
+
+    return items;
+  }, [clientItems, availabilityFilter, search, sortKey, sortDir]);
 
   const pendingHandoffCount = useMemo(() => {
     const scopedDeals =
@@ -111,6 +216,18 @@ const Clients = () => {
       (d) => !isHandoffComplete(d.handoff ?? defaultHandoff),
     ).length;
   }, [deals, selectedRepId]);
+
+  const SortHeader = ({ label, colKey }: { label: string; colKey: SortKey }) => (
+    <TableHead
+      className="font-semibold cursor-pointer select-none hover:text-foreground"
+      onClick={() => handleSort(colKey)}
+    >
+      <div className="flex items-center gap-1">
+        {label}
+        <ArrowUpDown className={`h-3.5 w-3.5 transition-colors ${sortKey === colKey ? "text-primary" : "text-muted-foreground/50"}`} />
+      </div>
+    </TableHead>
+  );
 
   return (
     <motion.div
@@ -129,12 +246,11 @@ const Clients = () => {
               Active Clients
             </h2>
             <p className="text-sm text-muted-foreground">
-              {filteredItems.length} client{filteredItems.length !== 1 ? "s" : ""} · <span className="hidden lg:inline">Click a row to edit</span><span className="lg:hidden">Tap card to edit</span>
+              {filteredItems.length} client{filteredItems.length !== 1 ? "s" : ""}{search ? ` matching "${search}"` : ""} · <span className="hidden lg:inline">Click a row to edit</span><span className="lg:hidden">Tap card to edit</span>
             </p>
           </div>
         </div>
         <div className="flex flex-wrap items-center gap-3">
-          {/* Commission summary: team total or rep-specific */}
           <div className="w-full sm:w-auto rounded-lg border border-primary/20 bg-primary/5 px-3 py-2 sm:px-4">
             {selectedRepId === "all" ? (
               <>
@@ -166,6 +282,16 @@ const Clients = () => {
               </>
             ) : null}
           </div>
+          <Button
+            variant="outline"
+            size="sm"
+            className="gap-2 shrink-0"
+            onClick={() => exportToCSV(filteredItems)}
+            title="Export to CSV"
+          >
+            <Download className="h-4 w-4" />
+            <span className="hidden sm:inline">Export CSV</span>
+          </Button>
         </div>
       </div>
 
@@ -192,40 +318,38 @@ const Clients = () => {
         </div>
       </div>
 
-      <div className="flex flex-wrap gap-2">
-        <Button
-          variant={availabilityFilter === "all" ? "default" : "outline"}
-          size="sm"
-          onClick={() => setAvailabilityFilter("all")}
-        >
-          All
-        </Button>
-        <Button
-          variant={availabilityFilter === "trial" ? "default" : "outline"}
-          size="sm"
-          onClick={() => setAvailabilityFilter("trial")}
-        >
-          Trial
-        </Button>
-        <Button
-          variant={availabilityFilter === "in_lag" ? "default" : "outline"}
-          size="sm"
-          onClick={() => setAvailabilityFilter("in_lag")}
-        >
-          In lag
-        </Button>
-        <Button
-          variant={availabilityFilter === "ready" ? "default" : "outline"}
-          size="sm"
-          onClick={() => setAvailabilityFilter("ready")}
-        >
-          Ready
-        </Button>
+      {/* Search + Filter row */}
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-3">
+        <div className="relative flex-1">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input
+            placeholder="Search by client, rep, product, email..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="pl-9"
+          />
+        </div>
+        <div className="flex flex-wrap gap-2">
+          {(["all", "trial", "in_lag", "ready", "cancelled"] as AvailabilityFilter[]).map((f) => (
+            <Button
+              key={f}
+              variant={availabilityFilter === f ? "default" : "outline"}
+              size="sm"
+              onClick={() => setAvailabilityFilter(f)}
+            >
+              {f === "in_lag" ? "In lag" : f === "all" ? "All" : f.charAt(0).toUpperCase() + f.slice(1)}
+            </Button>
+          ))}
+        </div>
       </div>
 
       {/* Mobile/tablet: card layout */}
       <div className="space-y-3 lg:hidden">
-        {filteredItems.map((item) => (
+        {filteredItems.length === 0 ? (
+          <div className="rounded-xl border border-border bg-card p-8 text-center">
+            <p className="text-muted-foreground text-sm">No clients match your search.</p>
+          </div>
+        ) : filteredItems.map((item) => (
           <ClientCard
             key={item.deal.id}
             item={item}
@@ -244,27 +368,33 @@ const Clients = () => {
         ))}
       </div>
 
-      {/* Desktop: table with horizontal scroll for tablet */}
+      {/* Desktop: table with horizontal scroll */}
       <div className="hidden lg:block rounded-xl border border-border bg-card overflow-x-auto min-w-0">
         <Table>
           <TableHeader>
             <TableRow className="border-border bg-muted/30 hover:bg-muted/30">
               <TableHead className="font-semibold w-12 text-center">Handoff</TableHead>
-              <TableHead className="font-semibold">Client</TableHead>
+              <SortHeader label="Client" colKey="clientName" />
               <TableHead className="font-semibold">Rep</TableHead>
               <TableHead className="font-semibold">Services</TableHead>
               <TableHead className="font-semibold">Status</TableHead>
-              <TableHead className="font-semibold">Close Date</TableHead>
+              <SortHeader label="Close Date" colKey="closeDate" />
               <TableHead className="font-semibold">First Payment</TableHead>
-              <TableHead className="font-semibold">Payout Date</TableHead>
-              <TableHead className="font-semibold">Commission</TableHead>
-              <TableHead className="font-semibold text-right">MRR</TableHead>
-              <TableHead className="font-semibold text-right">Commission</TableHead>
+              <SortHeader label="Payout Date" colKey="payoutDate" />
+              <TableHead className="font-semibold">Commission Status</TableHead>
+              <SortHeader label="MRR" colKey="mrr" />
+              <SortHeader label="Commission" colKey="commission" />
               <TableHead className="font-semibold text-center">Paid</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
-            {filteredItems.map((item) => {
+            {filteredItems.length === 0 ? (
+              <TableRow>
+                <TableCell colSpan={12} className="py-10 text-center text-muted-foreground">
+                  No clients match your search.
+                </TableCell>
+              </TableRow>
+            ) : filteredItems.map((item) => {
               const productNames = item.deal.products
                 .map((li) => getProductById(li.productId)?.name ?? li.productId)
                 .join(", ");
@@ -329,7 +459,7 @@ const Clients = () => {
                   <TableCell className="text-muted-foreground">
                     {item.deal.firstPaymentDate
                       ? longDateFormat.format(new Date(`${item.deal.firstPaymentDate}T12:00:00`))
-                      : "—"}
+                      : "\u2014"}
                   </TableCell>
                   <TableCell className="text-muted-foreground">
                     {longDateFormat.format(item.summary.payoutDate)}
@@ -338,17 +468,17 @@ const Clients = () => {
                     {(() => {
                       const status = getCommissionStatus(item.deal, item.summary);
                       if (status === "paid") return <span className="text-muted-foreground">Paid</span>;
-                      if (status === "cancelled") return <span className="text-muted-foreground">—</span>;
+                      if (status === "cancelled") return <span className="text-muted-foreground">\u2014</span>;
                       if (status === "trial")
                         return (
                           <span className="text-amber-600 dark:text-amber-500">
-                            Trial — {item.deal.firstPaymentDate && shortDate.format(new Date(`${item.deal.firstPaymentDate}T12:00:00`))}
+                            Trial \u2014 {item.deal.firstPaymentDate && shortDate.format(new Date(`${item.deal.firstPaymentDate}T12:00:00`))}
                           </span>
                         );
                       if (status === "ready") return <span className="font-medium text-primary">Ready</span>;
                       return (
                         <span className="text-muted-foreground" title={`Clears ${payoutConfig.lagDays}-day hold`}>
-                          In lag — {shortDate.format(item.summary.availableAt)}
+                          In lag \u2014 {shortDate.format(item.summary.availableAt)}
                         </span>
                       );
                     })()}

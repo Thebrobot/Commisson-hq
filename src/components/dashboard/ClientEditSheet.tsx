@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { Ban, ClipboardCheck, ExternalLink, Mail, Phone, Plus, Trash2, User } from "lucide-react";
+import { Ban, ClipboardCheck, CreditCard, ExternalLink, Mail, Phone, Plus, Trash2, User } from "lucide-react";
 import {
   calcDealCommission,
   currency,
@@ -9,6 +9,7 @@ import {
   longDateFormat,
 } from "@/lib/commission";
 import { productCatalog, setupFeeCatalog } from "@/data/catalog/commission";
+import { handoffProductColumns } from "@/data/handoffToolbox";
 import type {
   Deal,
   DealFeedItem,
@@ -19,6 +20,7 @@ import type {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import {
   Sheet,
   SheetContent,
@@ -62,6 +64,7 @@ const ClientEditSheet = ({
   const [firstPaymentDate, setFirstPaymentDate] = useState("");
   const [products, setProducts] = useState<DealProductLineItem[]>([]);
   const [setupFees, setSetupFees] = useState<DealSetupFeeLineItem[]>([]);
+  const [notes, setNotes] = useState("");
 
   useEffect(() => {
     if (item) {
@@ -72,6 +75,7 @@ const ClientEditSheet = ({
       setRepId(item.deal.repId);
       setCloseDate(item.deal.closeDate);
       setFirstPaymentDate(item.deal.firstPaymentDate ?? "");
+      setNotes(item.deal.notes ?? "");
       setProducts(
         item.deal.products.length > 0
           ? item.deal.products.map((p) => ({
@@ -154,6 +158,7 @@ const ClientEditSheet = ({
       repId: repId || deal.repId,
       closeDate: closeDate || deal.closeDate,
       firstPaymentDate: firstPaymentDate.trim() || null,
+      notes: notes.trim() || null,
       products: products.filter((p) => p.productId).map((p) => ({
         productId: p.productId,
         quantity: Math.max(p.quantity || 1, 1),
@@ -273,6 +278,39 @@ const ClientEditSheet = ({
                   </a>
                 </div>
               )}
+
+              {/* Stripe Payment Links */}
+              {(() => {
+                const dealProductIds = new Set(products.map((p) => p.productId).filter(Boolean));
+                const matchedLinks = handoffProductColumns
+                  .flatMap((col) => col.products)
+                  .filter((p) => dealProductIds.has(p.id));
+                if (matchedLinks.length === 0) return null;
+                return (
+                  <div className="space-y-2">
+                    <Label className="flex items-center gap-2">
+                      <CreditCard className="h-4 w-4" />
+                      Charge Customer
+                    </Label>
+                    <div className="flex flex-col gap-2">
+                      {matchedLinks.map((link) => (
+                        <a
+                          key={link.id}
+                          href={link.url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="flex items-center gap-2 rounded-lg border border-primary/30 bg-primary/5 px-3 py-2.5 text-sm font-semibold text-primary hover:bg-primary/10 transition-colors"
+                        >
+                          <CreditCard className="h-4 w-4 shrink-0" />
+                          Charge via Stripe — {link.name}
+                          <ExternalLink className="h-3.5 w-3.5 shrink-0 ml-auto" />
+                        </a>
+                      ))}
+                    </div>
+                    <p className="text-xs text-muted-foreground">Opens Stripe checkout in a new tab.</p>
+                  </div>
+                );
+              })()}
             </div>
           </div>
 
@@ -536,6 +574,19 @@ const ClientEditSheet = ({
                 );
               })}
             </div>
+          </div>
+
+          {/* Notes */}
+          <div className="space-y-2">
+            <Label htmlFor="client-notes">Internal Notes</Label>
+            <Textarea
+              id="client-notes"
+              value={notes}
+              onChange={(e) => setNotes(e.target.value)}
+              placeholder="Add notes about this client, deal details, or follow-ups..."
+              rows={3}
+              className="resize-none text-sm"
+            />
           </div>
 
           {/* Live commission summary */}

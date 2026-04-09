@@ -9,6 +9,7 @@ interface SupabaseRepRow {
   role: string;
   auth_user_id: string | null;
   created_at: string;
+  monthly_goal?: number | null;
 }
 
 interface SupabaseDealRow {
@@ -27,6 +28,7 @@ interface SupabaseDealRow {
   paid_out: boolean;
   paid_out_at: string | null;
   handoff: unknown;
+  notes: string | null;
   created_at: string;
 }
 
@@ -37,6 +39,7 @@ export function mapRepRow(row: SupabaseRepRow): Rep {
     email: row.email,
     avatar: row.avatar ?? "",
     role: row.role === "manager" ? "manager" : "rep",
+    monthlyGoal: row.monthly_goal ?? null,
   };
 }
 
@@ -71,6 +74,7 @@ export function mapDealRow(row: SupabaseDealRow): Deal {
     paidOut: row.paid_out ?? false,
     paidOutAt: row.paid_out_at ?? null,
     handoff: handoff ?? undefined,
+    notes: row.notes ?? null,
   };
 }
 
@@ -91,5 +95,6 @@ export function dealToSupabase(deal: Partial<Deal>, tenantId: string) {
     paid_out: deal.paidOut ?? false,
     paid_out_at: deal.paidOutAt ?? null,
     handoff: deal.handoff ?? {},
+    notes: deal.notes ?? null,
   };
 }

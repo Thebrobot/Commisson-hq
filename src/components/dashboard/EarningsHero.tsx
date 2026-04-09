@@ -18,7 +18,7 @@ import Rolling90DayChart from "@/components/dashboard/Rolling90DayChart";
 
 const EarningsHero = () => {
   const reduceMotion = useReducedMotion();
-  const { isManagerView, selectedSummary, team, deals } = useDashboard();
+  const { isManagerView, selectedSummary, selectedRep, team, deals } = useDashboard();
   const target = payoutConfig.monthlyGoal;
   const currentValue = isManagerView
     ? team.totalAvailableCommission
@@ -58,6 +58,7 @@ const EarningsHero = () => {
     return <ManagerSpotlightBoard {...managerBoardProps} />;
   }
 
+  const repDeals = deals.filter((d) => selectedRep && d.repId === selectedRep.id);
   const rate = (selectedSummary?.tier.rate ?? 0) * 100;
   const residualMonthly = selectedSummary?.residualMonthly ?? 0;
   const totalMrr = selectedSummary?.totalMrr ?? 0;
@@ -86,6 +87,7 @@ const EarningsHero = () => {
           lastMonthPayout={selectedSummary?.lastMonthPayout ?? 0}
           availableCommission={heroValue}
           reduceMotion={reduceMotion}
+          deals={repDeals}
         />
         <div className="lg:col-span-2">
           <TeamContext />
@@ -117,6 +119,7 @@ function ResidualCircleCard({
   lastMonthPayout,
   availableCommission,
   reduceMotion,
+  deals,
 }: {
   residualMonthly: number;
   rate: number;
@@ -130,6 +133,7 @@ function ResidualCircleCard({
   lastMonthPayout: number;
   availableCommission: number;
   reduceMotion: boolean | null;
+  deals?: import("@/types/commission").Deal[];
 }) {
   const size = 160;
   const stroke = 10;
@@ -217,6 +221,7 @@ function ResidualCircleCard({
           lastMonthPayout={lastMonthPayout}
           commissionDelta={commissionDelta}
           pctChange={pctChange}
+          deals={deals}
         />
 
         {/* MRR to unlock next tier */}

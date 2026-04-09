@@ -8,24 +8,62 @@ import {
   YAxis,
 } from "recharts";
 import { ChartContainer } from "@/components/ui/chart";
-import { compactCurrency, currency } from "@/lib/commission";
+import { calcDealCommission, compactCurrency } from "@/lib/commission";
+import type { Deal } from "@/types/commission";
 
 const CHART_CONFIG = {
   monthly: { label: "Monthly", color: "hsl(var(--primary))" },
   rolling: { label: "90-day avg", color: "hsl(var(--primary))" },
 } as const;
 
-/** Simulate last 90 days (3 months) trending up to current value */
-function build90DayData(residualMonthly: number, lastMonthPayout: number) {
+/** Build real 3-month commission history from deals. */
+function buildRealMonthlyData(deals: Deal[]) {
   const now = new Date();
-  const months: { month: string; monthly: number }[] = [];
-  const monthlyValues: number[] = [];
-
+  const months: { month: string; year: number; monthNum: number }[] = [];
   for (let i = 2; i >= 0; i--) {
     const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
-    months.push({ month: d.toLocaleDateString("en-US", { month: "short" }), monthly: 0 });
+    months.push({
+      month: d.toLocaleDateString("en-US", { month: "short" }),
+      year: d.getFullYear(),
+      monthNum: d.getMonth(),
+    });
   }
 
+  const monthlyValues = months.map((m) => {
+    const monthDeals = deals.filter((deal) => {
+      if (deal.status === "cancelled") return false;
+      const [y, mo] = deal.closeDate.split("-").map(Number);
+      return y === m.year && mo === m.monthNum + 1;
+    });
+    return monthDeals.reduce(
+      (sum, deal) => sum + calcDealCommission(deal).totalCommission,
+      0,
+    );
+  });
+
+  const rolling: number[] = [];
+  for (let i = 0; i < 3; i++) {
+    const slice = monthlyValues.slice(0, i + 1);
+    rolling.push(slice.reduce((a, b) => a + b, 0) / slice.length);
+  }
+
+  return months.map((m, i) => ({
+    month: m.month,
+    monthly: Math.round(monthlyValues[i]!),
+    rolling: Math.round(rolling[i]!),
+  }));
+}
+
+/** Fallback simulation when no deal data available */
+function buildSimulatedData(residualMonthly: number, lastMonthPayout: number) {
+  const now = new Date();
+  const months: { month: string }[] = [];
+  for (let i = 2; i >= 0; i--) {
+    const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+    months.push({ month: d.toLocaleDateString("en-US", { month: "short" }) });
+  }
+
+  const monthlyValues: number[] = [];
   if (residualMonthly > 0) {
     const base = Math.max(lastMonthPayout * 0.5, residualMonthly * 0.25);
     for (let i = 0; i < 3; i++) {
@@ -55,17 +93,15 @@ function build90DayData(residualMonthly: number, lastMonthPayout: number) {
 }
 
 interface Rolling90DayChartProps {
-  /** For residual card: monthly residual value. For payout card: use currentValue instead. */
   residualMonthly?: number;
   lastMonthPayout: number;
   commissionDelta?: number;
   pctChange?: number;
-  /** For payout card: available commission to trend toward. Overrides residualMonthly when set. */
   currentValue?: number;
-  /** Chart title, e.g. "Last 90 days" or "Payout trend" */
   title?: string;
-  /** Remove top margin and max-width for embedding in larger cards */
   compact?: boolean;
+  /** Real deal data for accurate historical chart. When provided, overrides simulation. */
+  deals?: Deal[];
 }
 
 export default function Rolling90DayChart({
@@ -76,12 +112,15 @@ export default function Rolling90DayChart({
   currentValue,
   title = "Last 90 days",
   compact = false,
+  deals,
 }: Rolling90DayChartProps) {
-  const trendValue = currentValue ?? residualMonthly;
-  const data = useMemo(
-    () => build90DayData(trendValue, lastMonthPayout),
-    [trendValue, lastMonthPayout],
-  );
+  const data = useMemo(() => {
+    if (deals && deals.length > 0) {
+      return buildRealMonthlyData(deals);
+    }
+    const trendValue = currentValue ?? residualMonthly;
+    return buildSimulatedData(trendValue, lastMonthPayout);
+  }, [deals, currentValue, residualMonthly, lastMonthPayout]);
 
   const maxVal = Math.max(...data.map((d) => d.monthly), 1);
   const showVs = lastMonthPayout > 0 && Math.abs(commissionDelta) >= 1;
@@ -141,9 +180,11 @@ export default function Rolling90DayChart({
           />
         </ComposedChart>
       </ChartContainer>
-      {showVs && (
+      {deals && deals.length > 0 ? (
+        <p className="text-[9px] text-muted-foreground mt-1 text-center">Commission booked per month</p>
+      ) : showVs ? (
         <p className="text-[9px] text-muted-foreground mt-1 text-center">Added vs last month</p>
-      )}
+      ) : null}
     </div>
   );
 }

@@ -8,6 +8,8 @@ export interface Rep {
   email: string;
   avatar: string;
   role?: "rep" | "manager";
+  /** Per-rep monthly goal override. Falls back to payoutConfig.monthlyGoal if null. */
+  monthlyGoal?: number | null;
 }
 
 export interface ProductCatalogItem {
@@ -65,12 +67,16 @@ export interface HandoffChecklist {
 
 export interface Handoff {
   checklist: HandoffChecklist;
+  /** Timestamps for when each checklist item was completed. Keys match HandoffChecklist keys. */
+  checklistTimestamps?: Partial<Record<keyof HandoffChecklist, string>>;
   /** URL to porting document (e.g. Google Doc, Dropbox) */
   portingDocUrl: string | null;
   /** URL to porting submission form (carrier/carrier portal) */
   portingSubmissionUrl: string | null;
   /** When all items were completed. */
   completedAt?: string | null;
+  /** Internal notes about this handoff. */
+  handoffNotes?: string | null;
 }
 
 export interface Deal {
@@ -92,6 +98,8 @@ export interface Deal {
   paidOutAt: string | null;
   /** Client handoff checklist for order fulfillment. */
   handoff?: Handoff | null;
+  /** Internal rep notes for this client deal. */
+  notes?: string | null;
 }
 
 export interface DealCommissionSummary {
@@ -121,6 +129,8 @@ export interface RepAggregate {
   closedThisMonthCount: number;
   /** Clients still on trial (firstPaymentDate in future). */
   onTrialCount: number;
+  /** Deals cancelled (churned). */
+  cancelledCount: number;
   tier: TierConfig;
   nextTier: TierConfig | null;
   residualMonthly: number;

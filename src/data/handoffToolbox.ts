@@ -62,7 +62,8 @@ export const handoffProductColumns: ProductLinkColumn[] = [
   {
     title: "iMapsPro",
     products: [
-      { id: "imapspro", name: "iMapsPro", url: "https://example.com/products/imapspro", icon: Package },
+      // TODO: Update this URL with the real iMapsPro Stripe payment link
+      { id: "imapspro", name: "iMapsPro", url: "https://buy.stripe.com/", icon: Package },
     ],
   },
 ];

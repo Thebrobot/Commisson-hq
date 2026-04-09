@@ -6,13 +6,14 @@ import {
   Check,
   ClipboardCheck,
   Copy,
+  CreditCard,
   ExternalLink,
   FileText,
   Link2,
   MessageCircle,
   Pencil,
 } from "lucide-react";
-import { handoffToolItems } from "@/data/handoffToolbox";
+import { handoffToolItems, handoffProductColumns } from "@/data/handoffToolbox";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -68,12 +69,19 @@ const HandoffKit = () => {
   const progressPct = (progress / totalItems) * 100;
 
   const updateChecklist = (key: keyof Handoff["checklist"], value: boolean) => {
-    const next = {
+    const now = new Date().toISOString();
+    const prevTimestamps = handoff.checklistTimestamps ?? {};
+    const updatedTimestamps = {
+      ...prevTimestamps,
+      ...(value ? { [key]: now } : { [key]: undefined }),
+    };
+    const next: Handoff = {
       ...handoff,
       checklist: { ...handoff.checklist, [key]: value },
+      checklistTimestamps: updatedTimestamps,
     };
     if (value && progress === totalItems - 1) {
-      next.completedAt = new Date().toISOString();
+      next.completedAt = now;
     } else if (!value) {
       next.completedAt = null;
     }
