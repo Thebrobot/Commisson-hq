@@ -2,7 +2,7 @@ import type { VercelRequest, VercelResponse } from "@vercel/node";
 
 /**
  * GET /api/business-search?q=Acme+Dental
- * Google Places Text Search when GOOGLE_PLACES_API_KEY (or GOOGLE_MAPS_API_KEY) is set.
+ * Google Places Text Search when Google_Places, GOOGLE_PLACES_API_KEY, or GOOGLE_MAPS_API_KEY is set.
  * Otherwise OpenStreetMap Nominatim.
  *
  * Keep this file self-contained: Vercel Node ESM cannot resolve relative src/ imports.
@@ -176,7 +176,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   }
 
   const googleKey =
-    process.env.GOOGLE_PLACES_API_KEY?.trim() || process.env.GOOGLE_MAPS_API_KEY?.trim();
+    process.env.Google_Places?.trim() ||
+    process.env.GOOGLE_PLACES_API_KEY?.trim() ||
+    process.env.GOOGLE_MAPS_API_KEY?.trim();
 
   try {
     const suggestions = googleKey ? await searchGoogle(q, googleKey) : await searchNominatim(q);
