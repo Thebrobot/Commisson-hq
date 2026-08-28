@@ -26,7 +26,7 @@ const ResidualTiers = ({ currentMRR = 12400, variant = "default" }: ResidualTier
         className="obsidian-card px-4 py-3"
       >
         <p className="mb-2 text-sm text-muted-foreground">
-          Stack active MRR to unlock higher residual commission rates.
+          Stack active MRC to unlock 10% residual after $10K.
         </p>
         <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:gap-3">
           {/* Mobile: vertical stack per tier. Desktop: horizontal bar */}
@@ -97,7 +97,7 @@ const ResidualTiers = ({ currentMRR = 12400, variant = "default" }: ResidualTier
         </span>
       </div>
       <p className="mb-4 text-sm leading-relaxed text-muted-foreground">
-        Stack active MRR to unlock higher residual percentages.
+        Stack active MRC to unlock 10% residual after $10K.
       </p>
 
       {/* Progress bar across all tiers */}

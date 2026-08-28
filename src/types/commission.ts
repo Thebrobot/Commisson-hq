@@ -21,6 +21,8 @@ export interface ProductCatalogItem {
   perUnit: boolean;
   /** Sale commission uses this fixed USD for the line instead of commissionable MRR (matrix packages). */
   fixedUpfrontCommissionUsd?: number;
+  /** Upfront commission as a multiple of MRC. Defaults to 1×. Use 0.1 for 10% packages. */
+  upfrontRate?: number;
 }
 
 export interface SetupFeeCatalogItem {

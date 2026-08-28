@@ -10,12 +10,10 @@ const QuickSim = ({ currentMRR = 12400 }: QuickSimProps) => {
   const scenarios = [
     { product: "Agent Broski (Ai Receptionist)", mrc: 852, newMRR: currentMRR + 852 },
     { product: "Agent Broski (Ai Voice + SMS)", mrc: 1042, newMRR: currentMRR + 1042 },
-    { product: "Brobot One Core", mrc: 297, newMRR: currentMRR + 297 },
+    { product: "Brobot One Core", mrc: 335, newMRR: currentMRR + 335 },
   ];
 
   const getResidualRate = (mrr: number) => {
-    if (mrr >= 35000) return 0.2;
-    if (mrr >= 20000) return 0.15;
     if (mrr >= 10000) return 0.1;
     return 0;
   };

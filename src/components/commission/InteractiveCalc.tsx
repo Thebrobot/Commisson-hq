@@ -11,12 +11,17 @@ import {
 } from "@/components/ui/select";
 import { productCatalog, setupFeeCatalog, tierConfig } from "@/data/catalog/commission";
 import {
+  catalogIdIsStripeMatrix,
+  stripeCheckoutPackages,
+} from "@/data/stripeCheckoutMatrix";
+import {
   calcDealCommission,
   currency,
   getNextTier,
   getPayoutDate,
   getTierForMrr,
   longDateFormat,
+  resolveCommissionableMrr,
 } from "@/lib/commission";
 import type { Deal } from "@/types/commission";
 
@@ -69,26 +74,21 @@ const InteractiveCalc = ({ currentMRR = 12400 }: InteractiveCalcProps) => {
     INITIAL_PRODUCTS.map((id) => defaultLineItem(id)),
   );
   const [setupFeeItems, setSetupFeeItems] = useState<SetupFeeItem[]>(() => [
-    { id: crypto.randomUUID(), feeId: "agent_broski_receptionist_setup", amount: "1500" },
+    { id: crypto.randomUUID(), feeId: "agent_broski_receptionist_setup", amount: "1560" },
   ]);
 
   const result = useMemo(() => {
     const products = lineItems.map((item) => {
       const product = productCatalog.find((p) => p.id === item.productId);
-      /** Package SKUs with fixedUpfrontCommissionUsd: line count ignored in sim. */
-      if (product?.fixedUpfrontCommissionUsd != null) {
-        return {
-          productId: item.productId,
-          quantity: 1,
-          overrideMrr: null,
-        };
-      }
       const parsedOverride = item.overrideMrr ? Number(item.overrideMrr) : null;
+      const isMatrix = catalogIdIsStripeMatrix(item.productId);
       return {
         productId: item.productId,
         quantity: Math.max(item.quantity, 1),
         overrideMrr:
-          product?.allowOverride && parsedOverride != null ? parsedOverride : null,
+          !isMatrix && product?.allowOverride && parsedOverride != null && parsedOverride > 0
+            ? parsedOverride
+            : null,
       };
     });
     const setupFeesForDeal = setupFeeItems
@@ -114,6 +114,7 @@ const InteractiveCalc = ({ currentMRR = 12400 }: InteractiveCalcProps) => {
       paidOutAt: null,
     };
     const summary = calcDealCommission(simulatedDeal);
+    const productLineTotals = products.map((item) => resolveCommissionableMrr(item));
     const nextMrr = currentMRR + summary.mrr;
     const currentTier = getTierForMrr(currentMRR);
     const projectedTier = getTierForMrr(nextMrr);
@@ -124,6 +125,7 @@ const InteractiveCalc = ({ currentMRR = 12400 }: InteractiveCalcProps) => {
 
     return {
       summary,
+      productLineTotals,
       nextMrr,
       currentTier,
       projectedTier,
@@ -149,10 +151,11 @@ const InteractiveCalc = ({ currentMRR = 12400 }: InteractiveCalcProps) => {
         if (item.id !== id) return item;
         const next = { ...item, ...updates };
         if (updates.productId != null) {
-          const p = productCatalog.find((x) => x.id === updates.productId);
-          if (p?.fixedUpfrontCommissionUsd != null) {
-            next.quantity = 1;
-            next.overrideMrr = "";
+          next.overrideMrr = "";
+          if (catalogIdIsStripeMatrix(updates.productId)) {
+            const pkg = stripeCheckoutPackages.find((p) => p.catalogProductId === updates.productId);
+            const maxLines = pkg ? Math.max(...pkg.lineOptions.map((o) => o.lines)) : 1;
+            next.quantity = Math.min(Math.max(next.quantity, 1), maxLines);
           }
         }
         return next;
@@ -176,7 +179,7 @@ const InteractiveCalc = ({ currentMRR = 12400 }: InteractiveCalcProps) => {
 
   const reset = () => {
     setLineItems(INITIAL_PRODUCTS.map((id) => defaultLineItem(id)));
-    setSetupFeeItems([{ id: crypto.randomUUID(), feeId: "agent_broski_receptionist_setup", amount: "1500" }]);
+    setSetupFeeItems([{ id: crypto.randomUUID(), feeId: "agent_broski_receptionist_setup", amount: "1560" }]);
   };
 
   const tierDisplay =
@@ -203,9 +206,7 @@ const InteractiveCalc = ({ currentMRR = 12400 }: InteractiveCalcProps) => {
                 Deal impact simulator
               </h2>
               <p className="mt-0.5 text-sm leading-relaxed text-muted-foreground">
-                For Brobot One and Agent Broski, line count does not change your sale commission in
-                this simulator. Other products use qty and optional MRR override. Setup fees and
-                residual tiers apply as usual.
+                Line amounts use the same Stripe totals as Handoff Hub. Commission is 1× each product MRC plus 10% of setup.
               </p>
             </div>
           </div>
@@ -233,8 +234,18 @@ const InteractiveCalc = ({ currentMRR = 12400 }: InteractiveCalcProps) => {
             {lineItems.map((item) => {
               const product =
                 productCatalog.find((p) => p.id === item.productId) ?? productCatalog[0];
-              const defaultMrr = currency.format(product.commissionableMrr);
-              const isPackageSaleFixed = product.fixedUpfrontCommissionUsd != null;
+              const parsedOverride = item.overrideMrr ? Number(item.overrideMrr) : null;
+              const isMatrix = catalogIdIsStripeMatrix(item.productId);
+              const matrixPkg = stripeCheckoutPackages.find((p) => p.catalogProductId === item.productId);
+              const lineMrr = resolveCommissionableMrr({
+                productId: item.productId,
+                quantity: Math.max(item.quantity, 1),
+                overrideMrr:
+                  !isMatrix && product.allowOverride && parsedOverride != null && parsedOverride > 0
+                    ? parsedOverride
+                    : null,
+              });
+              const defaultMrr = currency.format(lineMrr || product.commissionableMrr);
 
               return (
                 <div
@@ -256,13 +267,29 @@ const InteractiveCalc = ({ currentMRR = 12400 }: InteractiveCalcProps) => {
                       ))}
                     </SelectContent>
                   </Select>
-                  {isPackageSaleFixed ? (
-                    <span
-                      className="flex h-9 min-w-[5.5rem] items-center justify-center rounded-md border border-border bg-secondary/30 px-2 text-center text-xs font-medium text-muted-foreground"
-                      title="Line count does not change your sale commission in this simulator"
+                  {isMatrix && matrixPkg ? (
+                    <Select
+                      value={String(item.quantity)}
+                      onValueChange={(v) =>
+                        updateLineItem(item.id, { quantity: Math.max(Number(v) || 1, 1) })
+                      }
                     >
-                      1 sale
-                    </span>
+                      <SelectTrigger
+                        className="h-9 min-w-[10.5rem] w-auto rounded-md border border-border bg-card px-2.5 text-sm text-foreground"
+                        aria-label="Lines"
+                      >
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {matrixPkg.lineOptions.map((option) => (
+                          <SelectItem key={option.lines} value={String(option.lines)}>
+                            {option.lines} {option.lines === 1 ? "line" : "lines"} —{" "}
+                            {currency.format(option.monthlyTotal)}
+                            /mo
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   ) : (
                     <input
                       aria-label="Quantity"
@@ -277,9 +304,9 @@ const InteractiveCalc = ({ currentMRR = 12400 }: InteractiveCalcProps) => {
                       className="h-9 w-14 min-w-[3.5rem] rounded-md border border-border bg-card px-2 text-center text-sm text-foreground outline-none ring-offset-background transition focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
                     />
                   )}
-                  {isPackageSaleFixed ? (
-                    <span className="flex min-w-[5rem] flex-1 items-center rounded-md border border-border bg-primary/5 px-2.5 py-1.5 text-sm font-semibold text-primary">
-                      {currency.format(product.fixedUpfrontCommissionUsd!)}
+                  {isMatrix ? (
+                    <span className="flex min-w-[5rem] flex-1 items-center rounded-md border border-border bg-secondary/30 px-2.5 py-1.5 text-sm font-medium text-foreground">
+                      {defaultMrr}
                     </span>
                   ) : product.allowOverride ? (
                     <input
@@ -437,7 +464,14 @@ const InteractiveCalc = ({ currentMRR = 12400 }: InteractiveCalcProps) => {
             {currency.format(result.summary.totalCommission)}
           </motion.p>
           <p className="mt-0.5 text-sm leading-relaxed text-muted-foreground">
-            {currency.format(result.summary.upfrontCommission)} from product +{" "}
+            {result.productLineTotals.map((amount, index) => (
+              <span key={`${amount}-${index}`}>
+                {index > 0 ? " + " : ""}
+                {currency.format(amount)}
+              </span>
+            ))}
+            {result.productLineTotals.length > 0 ? " from product" : "No products"}
+            {" + "}
             {currency.format(result.summary.setupCommission)} from setup
           </p>
         </div>

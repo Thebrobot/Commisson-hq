@@ -91,6 +91,26 @@ export function getStripeRow(
   return pkg?.lineOptions.find((o) => o.lines === lines);
 }
 
+/** Monthly total from the Stripe device ladder used on the order handoff form. Beyond the last listed tier, steps by the last increment. */
+export function resolveStripeLadderMonthly(catalogProductId: string, lines: number): number | null {
+  const pkg = stripeCheckoutPackages.find((p) => p.catalogProductId === catalogProductId);
+  if (!pkg?.lineOptions.length) {
+    return null;
+  }
+
+  const qty = Math.max(1, Math.floor(lines) || 1);
+  const exact = pkg.lineOptions.find((o) => o.lines === qty);
+  if (exact) {
+    return exact.monthlyTotal;
+  }
+
+  const sorted = [...pkg.lineOptions].sort((a, b) => a.lines - b.lines);
+  const last = sorted[sorted.length - 1];
+  const prev = sorted[sorted.length - 2];
+  const step = prev ? last.monthlyTotal - prev.monthlyTotal : 0;
+  return last.monthlyTotal + step * (qty - last.lines);
+}
+
 /** catalog product ids that use the matrix checkout */
 export const STRIPE_MATRIX_CATALOG_IDS = new Set(
   stripeCheckoutPackages.map((p) => p.catalogProductId),

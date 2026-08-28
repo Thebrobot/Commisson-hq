@@ -1,4 +1,5 @@
 import { payoutConfig, productCatalog, setupFeeCatalog, tierConfig } from "@/data/catalog/commission";
+import { resolveStripeLadderMonthly } from "@/data/stripeCheckoutMatrix";
 import type {
   Deal,
   DealCommissionSummary,
@@ -59,12 +60,20 @@ export function resolveCommissionableMrr(lineItem: DealProductLineItem): number 
     return 0;
   }
 
-  /** Use override when set (discounts/custom pricing); otherwise use catalog commissionableMrr. */
-  const mrrPerUnit = lineItem.overrideMrr != null
-    ? lineItem.overrideMrr
-    : product.commissionableMrr;
+  const qty = Math.max(lineItem.quantity, 1);
 
-  return mrrPerUnit * Math.max(lineItem.quantity, 1);
+  /** Use override when set (discounts/custom pricing). */
+  if (lineItem.overrideMrr != null) {
+    return lineItem.overrideMrr * qty;
+  }
+
+  /** Brobot One / Agent Broski: MRC is the Stripe device-ladder total, not unit × qty. */
+  const ladderMonthly = resolveStripeLadderMonthly(lineItem.productId, qty);
+  if (ladderMonthly != null) {
+    return ladderMonthly;
+  }
+
+  return product.commissionableMrr * qty;
 }
 
 export function getTierForMrr(totalMrr: number): TierConfig {
@@ -265,10 +274,17 @@ export function calcDealCommission(deal: Deal, now = new Date()): DealCommission
   const mrr = deal.products.reduce((sum, item) => sum + resolveCommissionableMrr(item), 0);
   const upfrontCommission = deal.products.reduce((sum, item) => {
     const product = getProductById(item.productId);
-    if (product?.fixedUpfrontCommissionUsd != null) {
+    if (!product) {
+      return sum;
+    }
+    const lineMrr = resolveCommissionableMrr(item);
+    if (product.upfrontRate != null) {
+      return sum + lineMrr * product.upfrontRate;
+    }
+    if (product.fixedUpfrontCommissionUsd != null) {
       return sum + product.fixedUpfrontCommissionUsd;
     }
-    return sum + resolveCommissionableMrr(item);
+    return sum + lineMrr;
   }, 0);
   const setupCommission = deal.setupFees.reduce((sum, feeLine) => {
     const fee = getSetupFeeById(feeLine.type);

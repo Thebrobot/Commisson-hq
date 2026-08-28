@@ -167,7 +167,7 @@ const ClientEditSheet = ({
       catalogProductId === "ai-receptionist"
         ? "agent_broski_receptionist_setup"
         : "agent_broski_voice_sms_setup";
-    const amount = catalogProductId === "ai-receptionist" ? 1500 : 2500;
+    const amount = catalogProductId === "ai-receptionist" ? 1560 : 2600;
     setSetupFees((prev) => {
       const has = prev.some((s) => s.type === type && s.actualAmount > 0);
       if (has) return prev;

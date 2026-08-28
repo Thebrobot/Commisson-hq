@@ -9,20 +9,18 @@ export const productCatalog: ProductCatalogItem[] = [
   {
     id: "brobot-one-core",
     name: "Brobot One Core",
-    defaultMrr: 297,
-    commissionableMrr: 297,
+    defaultMrr: 335,
+    commissionableMrr: 335,
     allowOverride: false,
     perUnit: false,
-    fixedUpfrontCommissionUsd: 297,
   },
   {
     id: "brobot-one-basic",
     name: "Brobot One Basic",
-    defaultMrr: 129.99,
-    commissionableMrr: 129.99,
+    defaultMrr: 152,
+    commissionableMrr: 152,
     allowOverride: true,
     perUnit: false,
-    fixedUpfrontCommissionUsd: 130,
   },
   {
     id: "ai-receptionist",
@@ -31,7 +29,6 @@ export const productCatalog: ProductCatalogItem[] = [
     commissionableMrr: 852,
     allowOverride: true,
     perUnit: false,
-    fixedUpfrontCommissionUsd: 794,
   },
   {
     id: "agent-broski-voice-sms",
@@ -40,7 +37,6 @@ export const productCatalog: ProductCatalogItem[] = [
     commissionableMrr: 1042,
     allowOverride: true,
     perUnit: false,
-    fixedUpfrontCommissionUsd: 994,
   },
   {
     id: "revubro-starter",
@@ -54,7 +50,7 @@ export const productCatalog: ProductCatalogItem[] = [
     id: "revubro-growth",
     name: "RevuBro Growth",
     defaultMrr: 197,
-    commissionableMrr: 167,
+    commissionableMrr: 197,
     allowOverride: false,
     perUnit: false,
   },
@@ -62,7 +58,7 @@ export const productCatalog: ProductCatalogItem[] = [
     id: "revubro-pro",
     name: "RevuBro Pro",
     defaultMrr: 297,
-    commissionableMrr: 267,
+    commissionableMrr: 297,
     allowOverride: false,
     perUnit: false,
   },
@@ -75,12 +71,22 @@ export const productCatalog: ProductCatalogItem[] = [
     perUnit: false,
   },
   {
-    id: "bot-only-ai",
-    name: "Bot-Only AI",
-    defaultMrr: 499,
-    commissionableMrr: 499,
-    allowOverride: false,
-    perUnit: true,
+    id: "marketing-package",
+    name: "Marketing Package",
+    defaultMrr: 0,
+    commissionableMrr: 0,
+    allowOverride: true,
+    perUnit: false,
+    upfrontRate: 0.1,
+  },
+  {
+    id: "custom-package",
+    name: "Custom Package",
+    defaultMrr: 0,
+    commissionableMrr: 0,
+    allowOverride: true,
+    perUnit: false,
+    upfrontRate: 0.1,
   },
 ];
 
@@ -88,20 +94,20 @@ export const setupFeeCatalog: SetupFeeCatalogItem[] = [
   {
     id: "agent_broski_receptionist_setup",
     name: "Agent Broski (Ai Receptionist) — Setup",
-    price: 1500,
+    price: 1560,
     commissionRate: 0.1,
   },
   {
     id: "agent_broski_voice_sms_setup",
     name: "Agent Broski (Ai Voice + SMS) — Setup",
-    price: 2500,
+    price: 2600,
     commissionRate: 0.1,
   },
   {
     id: "website_build",
     name: "Website Build",
     price: 0,
-    commissionRate: 0.2,
+    commissionRate: 0.1,
     isVariable: true,
   },
   {
@@ -115,8 +121,6 @@ export const setupFeeCatalog: SetupFeeCatalogItem[] = [
 export const tierConfig: TierConfig[] = [
   { mrr: 0, rate: 0, label: "Launch" },
   { mrr: 10000, rate: 0.1, label: "Foundation" },
-  { mrr: 20000, rate: 0.15, label: "Scale" },
-  { mrr: 35000, rate: 0.2, label: "Peak" },
 ];
 
 export const payoutConfig: PayoutConfig = {

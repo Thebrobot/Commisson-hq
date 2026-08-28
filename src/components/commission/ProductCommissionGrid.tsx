@@ -31,21 +31,11 @@ const ProductCommissionGrid = () => {
               initial={reduceMotion ? false : { opacity: 0, x: -10 }}
               animate={reduceMotion ? undefined : { opacity: 1, x: 0 }}
               transition={{ delay: 0.3 + i * 0.05 }}
-              className={`flex items-center justify-between rounded-lg border p-4 snap-transition ${
-                product.commissionableMrr >= 497 ? "border-primary/20 bg-primary/5" : "border-border bg-secondary/20"
-              }`}
+              className="flex items-center justify-between rounded-lg border border-border bg-secondary/20 p-4 snap-transition"
             >
               <div className="min-w-0">
                 <div>
-                  <div className="flex items-center gap-2">
-                    <p className="text-sm font-semibold text-foreground truncate">{product.name}</p>
-                    {product.commissionableMrr >= 497 && (
-                      <span className="flex items-center gap-0.5 text-sm font-bold uppercase tracking-widest text-accent">
-                        <Zap className="h-3 w-3" strokeWidth={3} />
-                        Priority
-                      </span>
-                    )}
-                  </div>
+                  <p className="text-sm font-semibold leading-snug text-foreground">{product.name}</p>
                   <p className="text-sm text-muted-foreground mt-0.5">
                     Default {preciseCurrency.format(product.defaultMrr)}
                     {product.perUnit ? " per unit" : " monthly"}
@@ -65,7 +55,7 @@ const ProductCommissionGrid = () => {
 
         <div className="mt-4 rounded-lg bg-primary/5 border border-primary/10 px-4 py-3">
           <p className="text-sm text-primary/80">
-            RevuBro Growth and Pro use reduced commissionable MRR, while Brobot One Basic supports per-deal MRR overrides.
+            Marketing and custom packages pay 10% of MRC. Brobot One Basic supports per-deal MRR overrides.
           </p>
         </div>
       </motion.div>
