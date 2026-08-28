@@ -219,11 +219,11 @@ function PartnerRepBookCard({
     >
       <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-primary/5 to-transparent" />
       <div className="relative z-10">
-        <p className="text-xs font-bold uppercase tracking-[0.2em] text-foreground mb-3">Your book</p>
+        <p className="text-xs font-bold uppercase tracking-[0.2em] text-primary mb-2">Current MRR</p>
         <p className="font-mono-tabular text-4xl font-bold tracking-tight text-foreground md:text-5xl">
           {currency.format(totalMrr)}
         </p>
-        <p className="mt-1 text-sm text-muted-foreground">Current MRR</p>
+        <p className="mt-1 text-sm text-muted-foreground">Your book</p>
         <div className="mt-4 flex flex-wrap gap-4 text-sm">
           <span className="text-muted-foreground">
             <span className="font-semibold text-foreground">{clients}</span> paying clients
@@ -330,10 +330,14 @@ function ResidualCircleCard({
           </div>
         </div>
 
-        {/* Current MRR - so user can verify the system has the right number */}
-        <p className="mt-2 text-xs font-medium text-muted-foreground">
-          Current MRR: {currency.format(totalMrr)}
-        </p>
+        <div className="mt-3 w-full rounded-xl border border-primary/25 bg-primary/10 px-4 py-2.5 text-center">
+          <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-primary">
+            Current MRR
+          </p>
+          <p className="font-mono-tabular text-2xl font-bold tracking-tight text-foreground md:text-3xl">
+            {currency.format(totalMrr)}
+          </p>
+        </div>
 
         {/* Percentage to next tier - below circle */}
         {!atMaxTier ? (
@@ -467,7 +471,7 @@ const ManagerSpotlightBoard = ({
       className="rounded-2xl border border-primary/20 bg-card p-5"
     >
       <div className="flex flex-col gap-5">
-        <div className="grid grid-cols-[minmax(0,1fr)_auto] gap-3 md:gap-5 items-end">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-[minmax(0,1.1fr)_minmax(0,0.9fr)_auto] sm:gap-5 sm:items-end">
           <div className="min-w-0">
             <div className="mb-2 flex gap-1.5">
               <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-primary/25 bg-primary/12">
@@ -479,7 +483,18 @@ const ManagerSpotlightBoard = ({
               {currency.format(heroValue)}
             </p>
           </div>
-          <div className="min-w-0 flex flex-col gap-0.5 overflow-hidden items-end text-right shrink-0">
+          <div className="min-w-0">
+            <div className="mb-2 flex gap-1.5">
+              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-primary/25 bg-primary/12">
+                <TrendingUp className="h-4 w-4 text-primary" />
+              </div>
+              <span className="text-xs font-medium uppercase tracking-[0.2em] text-primary">Current MRR</span>
+            </div>
+            <p className="font-mono-tabular text-4xl font-bold tracking-tight text-foreground md:text-5xl xl:text-6xl">
+              {currency.format(teamMrr)}
+            </p>
+          </div>
+          <div className="min-w-0 flex flex-col gap-0.5 overflow-hidden items-start sm:items-end text-left sm:text-right shrink-0">
             <p className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground md:text-xs">
               Vs last month
             </p>
@@ -504,9 +519,8 @@ const ManagerSpotlightBoard = ({
           <MonthlyProductChart deals={deals} monthLabel="Team sales this month" />
         </div>
 
-        <div className="grid gap-3 sm:grid-cols-3">
+        <div className="grid gap-3 sm:grid-cols-2">
           {[
-            { label: "MRR", value: currency.format(teamMrr), icon: TrendingUp },
             { label: "Next payout", value: nextPayoutDate ? longDateFormat.format(nextPayoutDate) : "Pending", icon: CalendarClock },
             { label: "Top rep", value: currency.format(topPerformerValue), avatar: topPerformerAvatar, avatarName: topPerformerName, icon: Crown },
           ].map((card, i) => (

@@ -105,12 +105,17 @@ export default function ClientCard({
             {!hideCommissionUI && (
               <span>Payout {longDateFormat.format(item.summary.payoutDate)}</span>
             )}
-            <span className="font-mono-tabular">{currency.format(mrr)} MRR</span>
           </div>
-          <div className="mt-3 flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
+          <div className="mt-3 flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-end sm:justify-between">
+            <div>
+              <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-primary">Current MRR</p>
+              <p className="font-mono-tabular text-xl font-bold text-foreground">
+                {currency.format(mrr)}
+              </p>
+            </div>
             {!hideCommissionUI && (
-              <p className="font-mono-tabular text-lg font-bold text-primary">
-                {currency.format(item.summary.totalCommission)}
+              <p className="font-mono-tabular text-sm font-medium text-muted-foreground">
+                {currency.format(item.summary.totalCommission)} commission
               </p>
             )}
             <div className="flex items-center gap-2">

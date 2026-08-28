@@ -278,6 +278,21 @@ const Clients = () => {
     ).length;
   }, [deals, selectedRepId]);
 
+  const headerMrr =
+    selectedRepId === "all" ? team.teamMrr : selectedSummary?.totalMrr ?? 0;
+  const headerPayingClients =
+    selectedRepId === "all"
+      ? team.activeClientCount
+      : selectedSummary?.payingClientCount ?? 0;
+  const headerCommission =
+    selectedRepId === "all"
+      ? team.totalAvailableCommission
+      : selectedSummary?.availableCommission ?? 0;
+  const headerPendingCommission =
+    selectedRepId === "all"
+      ? team.totalPendingCommission
+      : selectedSummary?.pendingCommission ?? 0;
+
   const SortHeader = ({ label, colKey }: { label: string; colKey: SortKey }) => (
     <TableHead
       className="font-semibold cursor-pointer select-none hover:text-foreground"
@@ -316,61 +331,33 @@ const Clients = () => {
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-3">
-          <div className="w-full sm:w-auto rounded-lg border border-primary/20 bg-primary/5 px-3 py-2 sm:px-4">
-            {hideCommissionUI ? (
-              selectedRepId === "all" ? (
-                <>
-                  <p className="text-sm font-semibold text-primary">Team MRR</p>
-                  <p className="font-mono-tabular text-lg font-bold text-foreground">
-                    {currency.format(team.teamMrr)}
-                  </p>
-                  <p className="text-xs text-muted-foreground mt-0.5">
-                    {team.activeClientCount} paying clients
-                  </p>
-                </>
-              ) : selectedSummary ? (
-                <>
-                  <p className="text-sm font-semibold text-primary">
-                    MRR for {selectedRep?.name ?? "rep"}
-                  </p>
-                  <p className="font-mono-tabular text-lg font-bold text-foreground">
-                    {currency.format(selectedSummary.totalMrr)}
-                  </p>
-                  <p className="text-xs text-muted-foreground mt-0.5">
-                    {selectedSummary.payingClientCount} paying clients
-                  </p>
-                </>
-              ) : null
-            ) : selectedRepId === "all" ? (
-              <>
-                <p className="text-sm font-semibold text-primary">
-                  Team commission this cycle
-                </p>
-                <p className="font-mono-tabular text-lg font-bold text-foreground">
-                  {currency.format(team.totalAvailableCommission)}
-                </p>
-                {team.totalPendingCommission > 0 && (
-                  <p className="text-xs text-muted-foreground mt-0.5">
-                    +{currency.format(team.totalPendingCommission)} pending
-                  </p>
-                )}
-              </>
-            ) : selectedSummary ? (
-              <>
-                <p className="text-sm font-semibold text-primary">
-                  Commission for {selectedRep?.name ?? "rep"}
-                </p>
-                <p className="font-mono-tabular text-lg font-bold text-foreground">
-                  {currency.format(selectedSummary.availableCommission)}
-                </p>
-                {selectedSummary.pendingCommission > 0 && (
-                  <p className="text-xs text-muted-foreground mt-0.5">
-                    +{currency.format(selectedSummary.pendingCommission)} pending
-                  </p>
-                )}
-              </>
-            ) : null}
+          <div className="w-full min-w-[12rem] sm:w-auto rounded-xl border border-primary/30 bg-primary/10 px-4 py-3 sm:px-5">
+            <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-primary">
+              Current MRR
+            </p>
+            <p className="font-mono-tabular text-2xl font-bold tracking-tight text-foreground sm:text-3xl">
+              {currency.format(headerMrr)}
+            </p>
+            <p className="text-xs text-muted-foreground mt-0.5">
+              {headerPayingClients} paying client{headerPayingClients !== 1 ? "s" : ""}
+              {selectedRepId !== "all" && selectedRep ? ` · ${selectedRep.name}` : ""}
+            </p>
           </div>
+          {!hideCommissionUI && (
+            <div className="w-full sm:w-auto rounded-lg border border-border bg-muted/30 px-3 py-2 sm:px-4">
+              <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                {selectedRepId === "all" ? "Team commission this cycle" : `Commission for ${selectedRep?.name ?? "rep"}`}
+              </p>
+              <p className="font-mono-tabular text-lg font-bold text-foreground">
+                {currency.format(headerCommission)}
+              </p>
+              {headerPendingCommission > 0 && (
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  +{currency.format(headerPendingCommission)} pending
+                </p>
+              )}
+            </div>
+          )}
           <Button
             variant="outline"
             size="sm"
@@ -599,12 +586,12 @@ const Clients = () => {
                       </TableCell>
                     </>
                   )}
-                  <TableCell className="font-mono-tabular text-right">
+                  <TableCell className="font-mono-tabular text-right text-base font-bold text-foreground">
                     {currency.format(mrr)}
                   </TableCell>
                   {!hideCommissionUI && (
                     <>
-                      <TableCell className="font-mono-tabular text-right font-semibold text-primary">
+                      <TableCell className="font-mono-tabular text-right text-sm font-medium text-muted-foreground">
                         {currency.format(item.summary.totalCommission)}
                       </TableCell>
                       <TableCell

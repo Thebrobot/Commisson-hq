@@ -119,9 +119,9 @@ const Commission = () => {
         </div>
 
         <div className="grid min-w-0 grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-2">
-          <div className="rounded-xl border border-border bg-card/50 px-4 py-3">
-            <p className="text-sm uppercase tracking-[0.2em] text-muted-foreground">Current MRR</p>
-            <p className="mt-1 font-mono-tabular text-2xl font-bold text-foreground">
+          <div className="rounded-xl border border-primary/30 bg-primary/10 px-4 py-4">
+            <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-primary">Current MRR</p>
+            <p className="mt-1 font-mono-tabular text-3xl font-bold tracking-tight text-foreground sm:text-4xl">
               ${currentMrr.toLocaleString()}
             </p>
           </div>
