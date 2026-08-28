@@ -1,16 +1,73 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
-import { applyCors } from "../src/lib/apiCors";
-import {
-  formatNominatimAddress,
-  industryFromGoogleTypes,
-  type BusinessLookupHit,
-} from "../src/lib/businessLookup";
 
 /**
  * GET /api/business-search?q=Acme+Dental
  * Google Places Text Search when GOOGLE_PLACES_API_KEY (or GOOGLE_MAPS_API_KEY) is set.
  * Otherwise OpenStreetMap Nominatim.
+ *
+ * Keep this file self-contained: Vercel Node ESM cannot resolve relative src/ imports.
  */
+
+const ALLOWED_ORIGINS = new Set([
+  "https://brobot-order-handoff.vercel.app",
+  "https://commisson-hq.vercel.app",
+]);
+
+function applyCors(req: VercelRequest, res: VercelResponse) {
+  const origin = req.headers.origin;
+  if (typeof origin === "string") {
+    const allowed =
+      ALLOWED_ORIGINS.has(origin) || /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin);
+    if (allowed) {
+      res.setHeader("Access-Control-Allow-Origin", origin);
+      res.setHeader("Vary", "Origin");
+    }
+  }
+  res.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
+  res.setHeader("Access-Control-Allow-Headers", "Content-Type");
+}
+
+interface BusinessLookupHit {
+  id: string;
+  name: string;
+  address: string;
+  phone: string | null;
+  website: string | null;
+  industry: string | null;
+  source: "google" | "openstreetmap";
+}
+
+const GOOGLE_TYPE_TO_INDUSTRY: Array<{ types: string[]; industry: string }> = [
+  { types: ["dentist", "doctor", "hospital", "physiotherapist", "pharmacy", "medical_lab"], industry: "Healthcare" },
+  { types: ["lawyer", "attorney"], industry: "Legal / Law Firm" },
+  { types: ["real_estate_agency"], industry: "Real Estate" },
+  { types: ["plumber", "electrician", "roofing_contractor", "general_contractor", "locksmith", "painter"], industry: "Home Services" },
+  { types: ["restaurant", "cafe", "bar", "meal_takeaway", "bakery"], industry: "Restaurant / Food & Bev" },
+  { types: ["clothing_store", "store", "shopping_mall", "furniture_store"], industry: "Retail / eCommerce" },
+  { types: ["car_dealer", "car_repair", "car_wash"], industry: "Automotive" },
+  { types: ["bank", "accounting", "insurance_agency", "atm"], industry: "Financial Services" },
+  { types: ["church", "place_of_worship"], industry: "Nonprofit" },
+];
+
+function industryFromGoogleTypes(types: string[] | undefined): string | null {
+  if (!types?.length) return null;
+  const set = new Set(types.map((t) => t.toLowerCase()));
+  for (const row of GOOGLE_TYPE_TO_INDUSTRY) {
+    if (row.types.some((t) => set.has(t))) return row.industry;
+  }
+  return "Professional Services";
+}
+
+function formatNominatimAddress(item: {
+  display_name?: string;
+  address?: Record<string, string>;
+}): string {
+  const a = item.address;
+  if (!a) return item.display_name?.trim() || "";
+  const line1 = [a.house_number, a.road].filter(Boolean).join(" ");
+  const line2 = [a.city || a.town || a.village || a.hamlet, a.state, a.postcode].filter(Boolean).join(", ");
+  return [line1, line2].filter(Boolean).join(", ") || item.display_name?.trim() || "";
+}
 
 interface GooglePlace {
   id?: string;

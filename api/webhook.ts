@@ -1,8 +1,5 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
 import { createClient } from "@supabase/supabase-js";
-import { parseHandoffIntake } from "../src/lib/commission/handoffIntake";
-import { defaultHandoff } from "../src/lib/handoff";
-import { applyCors } from "../src/lib/apiCors";
 
 /**
  * Webhook for GoHighLevel and the Brobot Handoff Hub form.
@@ -14,7 +11,182 @@ import { applyCors } from "../src/lib/apiCors";
  * Dry run: `?dry_run=1` or `"dry_run": true`.
  *
  * Required env: SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY
+ *
+ * Keep this file self-contained: Vercel Node ESM cannot resolve relative src/ imports.
  */
+
+const ALLOWED_ORIGINS = new Set([
+  "https://brobot-order-handoff.vercel.app",
+  "https://commisson-hq.vercel.app",
+]);
+
+function applyCors(req: VercelRequest, res: VercelResponse) {
+  const origin = req.headers.origin;
+  if (typeof origin === "string") {
+    const allowed =
+      ALLOWED_ORIGINS.has(origin) || /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin);
+    if (allowed) {
+      res.setHeader("Access-Control-Allow-Origin", origin);
+      res.setHeader("Vary", "Origin");
+    }
+  }
+  res.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
+  res.setHeader("Access-Control-Allow-Headers", "Content-Type");
+}
+
+const defaultHandoff = {
+  checklist: {
+    contractSigned: false,
+    paymentProcessed: false,
+    activeClientCreated: false,
+    productRecorded: false,
+    loaSigned: false,
+    portFormSubmitted: false,
+    dealMovedToPaymentAccepted: false,
+    saleCalledOutDiscord: false,
+    saleLoggedOnboardingDiscord: false,
+  },
+  portingDocUrl: null,
+  portingSubmissionUrl: null,
+};
+
+const HANDOFF_PRODUCT_ID_MAP: Record<string, string> = {
+  "brobot-one-basic": "brobot-one-basic",
+  "brobot-one-core": "brobot-one-core",
+  "ai-receptionist": "ai-receptionist",
+  "ai-receptionist-priority": "ai-receptionist",
+  "agent-broski-voice-sms": "agent-broski-voice-sms",
+  "ai-growth-priority": "agent-broski-voice-sms",
+};
+
+const HANDOFF_SETUP_TYPE_MAP: Record<string, string> = {
+  "ai-receptionist": "agent_broski_receptionist_setup",
+  "ai-receptionist-priority": "agent_broski_receptionist_setup",
+  "agent-broski-voice-sms": "agent_broski_voice_sms_setup",
+  "ai-growth-priority": "agent_broski_voice_sms_setup",
+};
+
+function asRecord(value: unknown): Record<string, unknown> | null {
+  if (value && typeof value !== "object") return null;
+  if (!value || Array.isArray(value)) return null;
+  return value as Record<string, unknown>;
+}
+
+function str(value: unknown): string {
+  return typeof value === "string" ? value.trim() : "";
+}
+
+function parseMoney(raw: unknown): number | null {
+  if (typeof raw === "number" && Number.isFinite(raw)) return raw;
+  const n = parseFloat(str(raw).replace(/[$,\s]/g, ""));
+  return Number.isFinite(n) ? n : null;
+}
+
+function parseQty(raw: unknown): number {
+  const n = typeof raw === "number" ? raw : parseInt(str(raw), 10);
+  if (!Number.isFinite(n) || n < 1) return 1;
+  return Math.floor(n);
+}
+
+function todayIso(): string {
+  return new Date().toISOString().slice(0, 10);
+}
+
+function isoDate(raw: unknown): string | null {
+  const s = str(raw);
+  return /^\d{4}-\d{2}-\d{2}$/.test(s) ? s : null;
+}
+
+function mapHandoffProductId(productId: string): string | null {
+  const id = str(productId);
+  if (!id) return null;
+  return HANDOFF_PRODUCT_ID_MAP[id] ?? HANDOFF_PRODUCT_ID_MAP[id.toLowerCase()] ?? null;
+}
+
+function mapHandoffFormLines(productsRaw: unknown): {
+  products: Array<{ productId: string; quantity: number; overrideMrr: number | null }>;
+  setupFees: Array<{ type: string; actualAmount: number }>;
+} {
+  const rows = Array.isArray(productsRaw) ? productsRaw : [];
+  const products: Array<{ productId: string; quantity: number; overrideMrr: number | null }> = [];
+  const setupFees: Array<{ type: string; actualAmount: number }> = [];
+
+  for (const row of rows) {
+    const rec = asRecord(row);
+    if (!rec) continue;
+    const formProductId = str(rec.productId);
+    const catalogId = mapHandoffProductId(formProductId);
+    if (!catalogId) continue;
+
+    const quantity = parseQty(rec.lineQty ?? rec.quantity);
+    const monthlyTotal = parseMoney(rec.monthlyAmount ?? rec.mrc);
+    products.push({
+      productId: catalogId,
+      quantity,
+      overrideMrr: monthlyTotal != null ? monthlyTotal / quantity : null,
+    });
+
+    const setupAmount = parseMoney(rec.setupFee ?? rec.setup);
+    if (setupAmount != null && setupAmount > 0) {
+      const type = HANDOFF_SETUP_TYPE_MAP[formProductId] ?? HANDOFF_SETUP_TYPE_MAP[catalogId];
+      setupFees.push({ type: type || "website_build", actualAmount: setupAmount });
+    }
+  }
+
+  return { products, setupFees };
+}
+
+function parseHandoffIntake(body: Record<string, unknown>) {
+  const nestedForm = body.source === "deal-submission-form" || asRecord(body.business) != null;
+  const contact = asRecord(body.contact);
+  const business = asRecord(body.business);
+  const rep = asRecord(body.rep) ?? asRecord(body.partner);
+  const billing = asRecord(body.billing);
+
+  const companyName = nestedForm
+    ? str(business?.legalName) || str(body.company_name)
+    : str(body.company_name);
+  const contactEmail = nestedForm
+    ? str(contact?.email) || str(body.contact_email)
+    : str(body.contact_email);
+  const contactPhone = nestedForm
+    ? str(contact?.phone) || str(body.contact_phone)
+    : str(body.contact_phone);
+  const repEmail = nestedForm
+    ? str(rep?.email) || str(body.assigned_rep_email) || str(body.rep_email)
+    : str(body.assigned_rep_email) || str(body.rep_email);
+  const contactId =
+    str(body.contact_id) ||
+    (contactEmail ? `handoff:${contactEmail.toLowerCase()}` : "") ||
+    (companyName ? `handoff:${companyName.toLowerCase()}` : "");
+
+  if (!companyName || !repEmail || !contactId) {
+    throw new Error("Missing required fields: company_name, rep email, and contact_id");
+  }
+
+  const lines = nestedForm
+    ? mapHandoffFormLines(body.products)
+    : { products: [], setupFees: [] };
+
+  const closeDate =
+    isoDate(billing?.saleDate) || isoDate(body.close_date) || isoDate(body.sale_date) || todayIso();
+  const firstPaymentDate =
+    isoDate(billing?.estimatedChargeDate) || isoDate(body.first_payment_date) || isoDate(body.charge_date);
+
+  return {
+    clientName: companyName,
+    ghlContactId: contactId,
+    contactEmail: contactEmail || null,
+    contactPhone: contactPhone || null,
+    assignedRepEmail: repEmail.toLowerCase(),
+    closeDate,
+    firstPaymentDate,
+    notes: str(body.notes) || null,
+    products: lines.products,
+    setupFees: lines.setupFees,
+    source: nestedForm ? "deal-submission-form" : "ghl",
+  };
+}
 
 function readDryRunFlag(req: VercelRequest, body: Record<string, unknown>): boolean {
   const q = req.query?.dry_run;
