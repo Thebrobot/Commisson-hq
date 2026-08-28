@@ -1,5 +1,5 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
-import { applyCors } from "./_cors";
+import { applyCors } from "../src/lib/apiCors";
 import {
   formatNominatimAddress,
   industryFromGoogleTypes,

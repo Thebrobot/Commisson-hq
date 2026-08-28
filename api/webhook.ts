@@ -2,7 +2,7 @@ import type { VercelRequest, VercelResponse } from "@vercel/node";
 import { createClient } from "@supabase/supabase-js";
 import { parseHandoffIntake } from "../src/lib/commission/handoffIntake";
 import { defaultHandoff } from "../src/lib/handoff";
-import { applyCors } from "./_cors";
+import { applyCors } from "../src/lib/apiCors";
 
 /**
  * Webhook for GoHighLevel and the Brobot Handoff Hub form.

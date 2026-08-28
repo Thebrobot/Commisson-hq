@@ -1,11 +1,17 @@
-import type { VercelRequest, VercelResponse } from "@vercel/node";
-
 const ALLOWED_ORIGINS = new Set([
   "https://brobot-order-handoff.vercel.app",
   "https://commisson-hq.vercel.app",
 ]);
 
-export function corsOrigin(req: VercelRequest): string | null {
+interface CorsRequest {
+  headers: { origin?: string | string[] };
+}
+
+interface CorsResponse {
+  setHeader: (name: string, value: string) => void;
+}
+
+export function corsOrigin(req: CorsRequest): string | null {
   const origin = req.headers.origin;
   if (!origin || typeof origin !== "string") return null;
   if (ALLOWED_ORIGINS.has(origin)) return origin;
@@ -13,7 +19,7 @@ export function corsOrigin(req: VercelRequest): string | null {
   return null;
 }
 
-export function applyCors(req: VercelRequest, res: VercelResponse) {
+export function applyCors(req: CorsRequest, res: CorsResponse) {
   const origin = corsOrigin(req);
   if (origin) {
     res.setHeader("Access-Control-Allow-Origin", origin);
