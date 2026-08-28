@@ -1,5 +1,5 @@
 import { motion } from "framer-motion";
-import { User } from "lucide-react";
+import { Info, User } from "lucide-react";
 import { Navigate } from "react-router-dom";
 import ResidualTiers from "@/components/commission/ResidualTiers";
 import ProductCommissionGrid from "@/components/commission/ProductCommissionGrid";
@@ -132,6 +132,14 @@ const Commission = () => {
         </div>
       </motion.div>
 
+      <div className="flex items-start gap-2 rounded-xl border border-border bg-muted/30 px-4 py-3">
+        <Info className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />
+        <p className="text-sm leading-relaxed text-muted-foreground">
+          These figures are before Stripe processing fees. Fees are usually around 4% of MRC; we build
+          that into the listed price to protect our pricing.
+        </p>
+      </div>
+
       <div className="flex w-full flex-col gap-4">
         <div className="w-full">
           <ResidualTiers currentMRR={currentMrr} variant="compact" />
@@ -147,16 +155,6 @@ const Commission = () => {
         </div>
         <div className="lg:col-span-1">
           <NonCommissionable />
-          <div className="obsidian-card mt-6 p-6">
-            <h3 className="text-sm font-bold uppercase tracking-wider text-muted-foreground">
-              Integration notes
-            </h3>
-            <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
-              The current UI is seeded with real commission rules so it can later swap to webhook-backed data
-              without changing the payout math. The next backend step is to ingest Brobot events and map
-              them into normalized deals tied to reps by identifier.
-            </p>
-          </div>
         </div>
       </div>
     </div>

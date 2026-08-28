@@ -25,7 +25,13 @@ const ProductCommissionGrid = () => {
         </p>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          {productCatalog.map((product, i) => (
+          {productCatalog.map((product, i) => {
+            const percentOfMrc =
+              product.upfrontRate != null && product.upfrontRate !== 1
+                ? `${(product.upfrontRate * 100).toFixed(0)}% of MRC`
+                : null;
+
+            return (
             <motion.div
               key={product.id}
               initial={reduceMotion ? false : { opacity: 0, x: -10 }}
@@ -37,26 +43,37 @@ const ProductCommissionGrid = () => {
                 <div>
                   <p className="text-sm font-semibold leading-snug text-foreground">{product.name}</p>
                   <p className="text-sm text-muted-foreground mt-0.5">
-                    Default {preciseCurrency.format(product.defaultMrr)}
-                    {product.perUnit ? " per unit" : " monthly"}
-                    {product.allowOverride ? " · override allowed" : ""}
+                    {percentOfMrc
+                      ? "Priced per deal"
+                      : `Default ${preciseCurrency.format(product.defaultMrr)}${product.perUnit ? " per unit" : " monthly"}`}
                   </p>
                 </div>
               </div>
               <div className="text-right flex-shrink-0 ml-3">
                 <p className="font-mono-tabular text-sm font-bold text-primary">
-                  {preciseCurrency.format(product.commissionableMrr)}
+                  {percentOfMrc ?? preciseCurrency.format(product.commissionableMrr)}
                 </p>
-                <p className="text-sm text-muted-foreground">Commissionable MRR</p>
+                <p className="text-sm text-muted-foreground">
+                  {percentOfMrc ? "Upfront commission" : "Commissionable MRR"}
+                </p>
               </div>
             </motion.div>
-          ))}
+            );
+          })}
         </div>
 
-        <div className="mt-4 rounded-lg bg-primary/5 border border-primary/10 px-4 py-3">
-          <p className="text-sm text-primary/80">
-            Marketing and custom packages pay 10% of MRC. Brobot One Basic supports per-deal MRR overrides.
-          </p>
+        <div className="mt-4 space-y-2">
+          <div className="rounded-lg border border-border bg-muted/30 px-4 py-3">
+            <p className="text-sm leading-relaxed text-muted-foreground">
+              Catalog amounts are before Stripe processing fees. Fees are usually around 4% of MRC; we
+              apply that to the listed price to protect our pricing.
+            </p>
+          </div>
+          <div className="rounded-lg bg-primary/5 border border-primary/10 px-4 py-3">
+            <p className="text-sm text-primary/80">
+              Brobot One Basic supports per-deal MRR overrides.
+            </p>
+          </div>
         </div>
       </motion.div>
 
