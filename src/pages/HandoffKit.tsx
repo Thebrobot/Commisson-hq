@@ -13,7 +13,7 @@ import {
   MessageCircle,
   Pencil,
 } from "lucide-react";
-import { handoffToolItems, handoffProductColumns } from "@/data/handoffToolbox";
+import { DEAL_SUBMISSION_URL, handoffToolItems } from "@/data/handoffToolbox";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -202,9 +202,9 @@ Rep: ${rep?.name ?? ""}`;
                 No active clients to manage. Add a client first.
               </p>
               <Button asChild>
-                <Link to="/clients" state={{ openNewClient: true }}>
+                <a href={DEAL_SUBMISSION_URL} target="_blank" rel="noopener noreferrer">
                   Add client
-                </Link>
+                </a>
               </Button>
             </CardContent>
           </Card>

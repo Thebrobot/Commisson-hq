@@ -7,7 +7,7 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
-import { handoffToolItems, handoffProductColumns } from "@/data/handoffToolbox";
+import { handoffToolItems } from "@/data/handoffToolbox";
 import {
   defaultHandoff,
   HANDOFF_ITEMS,
@@ -66,10 +66,10 @@ const HandoffList = () => {
           </motion.div>
           <div>
             <h1 className="text-3xl sm:text-4xl leading-none mb-2">
-          <span className="dashboard-title-primary">HANDOFF </span>
-          <span className="dashboard-title-accent">HUB</span>
-        </h1>
-        <div className="mb-3 h-0.5 w-10 rounded-full bg-primary" />
+              <span className="dashboard-title-primary">HANDOFF </span>
+              <span className="dashboard-title-accent">HUB</span>
+            </h1>
+            <div className="mb-3 h-0.5 w-10 rounded-full bg-primary" />
             <p className="mt-1 text-sm text-muted-foreground max-w-xl">
               Complete order handoffs, manage pending work, and access sales links.
             </p>
@@ -263,59 +263,6 @@ const HandoffList = () => {
           </div>
           <StripeCheckoutControls />
         </motion.div>
-      </section>
-
-      {/* Section 3: Order links — reference, de-emphasized */}
-      <section className="relative mt-10">
-        <h3 className="mb-4 text-sm font-bold uppercase tracking-[0.15em] text-muted-foreground">
-          Other order links
-        </h3>
-        <div className="grid grid-cols-1 gap-6 sm:grid-cols-3">
-          {handoffProductColumns.map((column, colIdx) => (
-            <motion.div
-              key={column.title}
-              initial={reduceMotion ? false : { opacity: 0, y: 8 }}
-              animate={reduceMotion ? undefined : { opacity: 1, y: 0 }}
-              transition={{ delay: 0.15 + colIdx * 0.08 }}
-              className="flex flex-col gap-3"
-            >
-              <h4 className="rounded-full bg-muted/80 px-4 py-1.5 text-sm font-bold text-foreground w-fit">
-                {column.title}
-              </h4>
-              <div className="flex flex-col gap-2">
-                {column.products.map((product, i) => {
-                  const Icon = product.icon;
-                  return (
-                    <motion.a
-                      key={product.id}
-                      href={product.url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      initial={reduceMotion ? false : { opacity: 0, x: -8 }}
-                      animate={reduceMotion ? undefined : { opacity: 1, x: 0 }}
-                      transition={{ delay: 0.2 + colIdx * 0.1 + i * 0.05 }}
-                      whileHover={reduceMotion ? undefined : { x: 4, scale: 1.01 }}
-                      className="group flex items-center gap-3 rounded-xl border border-border/60 bg-card/60 p-3 backdrop-blur-sm transition-all duration-200 hover:border-primary/30 hover:bg-card/90"
-                    >
-                      <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-primary/15 to-violet-500/15 text-primary">
-                        <Icon className="h-4 w-4" />
-                      </div>
-                      <div className="min-w-0 flex-1">
-                        <h5 className="truncate text-sm font-semibold text-foreground group-hover:text-primary transition-colors">
-                          {product.name}
-                        </h5>
-                        <span className="mt-0.5 flex items-center gap-1 text-xs text-muted-foreground">
-                          Sales link
-                          <ExternalLink className="h-3 w-3 opacity-0 transition-all group-hover:translate-x-0.5 group-hover:opacity-70" />
-                        </span>
-                      </div>
-                    </motion.a>
-                  );
-                })}
-              </div>
-            </motion.div>
-          ))}
-        </div>
       </section>
     </motion.div>
   );

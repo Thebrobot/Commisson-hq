@@ -24,7 +24,7 @@ import {
 } from "@/components/ui/dialog";
 import { StripeCheckoutControls } from "@/components/dashboard/StripeCheckoutControls";
 import { handoffTools } from "@/data/handoffTools";
-import { handoffToolItems, handoffProductColumns } from "@/data/handoffToolbox";
+import { DEAL_SUBMISSION_URL, handoffToolItems } from "@/data/handoffToolbox";
 import ThemeToggle from "@/components/dashboard/ThemeToggle";
 import NotificationPanel from "@/components/dashboard/NotificationPanel";
 import { useDashboard } from "@/providers/DashboardProvider";
@@ -172,14 +172,22 @@ const DashboardHeader = () => {
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-[20rem] rounded-xl border-border bg-card/95 p-2 text-foreground backdrop-blur-xl md:w-auto md:min-w-[36rem] md:grid md:grid-cols-2 md:gap-x-6 md:p-4">
-                <DropdownMenuItem className="col-span-2 flex cursor-pointer items-start gap-3 rounded-lg px-3 py-2.5 focus:bg-secondary/70 focus:text-foreground md:col-span-2" onSelect={() => navigate("/clients", { state: { openNewClient: true } })}>
-                  <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary text-primary-foreground">
-                    <UserPlus className="h-4 w-4" />
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <p className="text-sm font-semibold">Add client</p>
-                    <p className="mt-0.5 text-xs text-muted-foreground">Create a new client and add them to your active deals.</p>
-                  </div>
+                <DropdownMenuItem className="col-span-2 md:col-span-2" asChild>
+                  <a
+                    href={DEAL_SUBMISSION_URL}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex cursor-pointer items-start gap-3 rounded-lg px-3 py-2.5 focus:bg-secondary/70 focus:text-foreground"
+                  >
+                    <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary text-primary-foreground">
+                      <UserPlus className="h-4 w-4" />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-sm font-semibold">Add client</p>
+                      <p className="mt-0.5 text-xs text-muted-foreground">Open the New Client Deal Submission form to add a client in one place.</p>
+                    </div>
+                    <ExternalLink className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+                  </a>
                 </DropdownMenuItem>
                 <DropdownMenuSeparator className="col-span-2 mx-0 bg-border md:col-span-2" />
                 <DropdownMenuLabel className="col-span-2 px-2 pb-1 pt-0 text-xs uppercase tracking-[0.2em] text-muted-foreground md:col-span-2">Tools</DropdownMenuLabel>
@@ -225,27 +233,6 @@ const DashboardHeader = () => {
                     </p>
                   </div>
                 </DropdownMenuItem>
-                <DropdownMenuSeparator className="col-span-2 mx-0 bg-border md:col-span-2" />
-                <DropdownMenuLabel className="col-span-2 px-2 pb-1 pt-0 text-xs uppercase tracking-[0.2em] text-muted-foreground md:col-span-2">Other order links</DropdownMenuLabel>
-                {handoffProductColumns.flatMap((col) => col.products).map((product) => {
-                  const Icon = product.icon;
-                  return (
-                    <DropdownMenuItem key={product.id} asChild>
-                      <a
-                        href={product.url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="flex cursor-pointer items-center gap-3 rounded-lg px-3 py-2.5 focus:bg-secondary/70 focus:text-foreground"
-                      >
-                        <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-secondary text-primary">
-                          <Icon className="h-4 w-4" />
-                        </div>
-                        <p className="text-sm font-semibold">{product.name}</p>
-                        <ExternalLink className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
-                      </a>
-                    </DropdownMenuItem>
-                  );
-                })}
                 <DropdownMenuSeparator className="col-span-2 mx-0 bg-border md:col-span-2" />
                 <DropdownMenuLabel className="col-span-2 px-2 pb-1 pt-0 text-xs uppercase tracking-[0.2em] text-muted-foreground md:col-span-2">Handoff Hub</DropdownMenuLabel>
                 {handoffTools.map((tool) => {
@@ -398,17 +385,17 @@ const DashboardHeader = () => {
                 </NavLink>
               ))}
               <div className="mt-4 pt-4 border-t border-border">
-                <Button
-                  variant="default"
-                  size="lg"
-                  className="w-full gap-2"
-                  onClick={() => {
-                    setMobileNavOpen(false);
-                    navigate("/clients", { state: { openNewClient: true } });
-                  }}
-                >
-                  <Plus className="h-4 w-4" />
-                  Add client
+                <Button variant="default" size="lg" className="w-full gap-2" asChild>
+                  <a
+                    href={DEAL_SUBMISSION_URL}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    onClick={() => setMobileNavOpen(false)}
+                  >
+                    <Plus className="h-4 w-4" />
+                    Add client
+                    <ExternalLink className="h-4 w-4" />
+                  </a>
                 </Button>
               </div>
             </nav>
