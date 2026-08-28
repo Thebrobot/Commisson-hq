@@ -337,7 +337,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       });
     }
 
-    const { error: insertError } = await supabase.from("deals").insert({
+    const dealRow: Record<string, unknown> = {
       tenant_id: rep.tenant_id,
       rep_id: rep.id,
       client_name: intake.clientName,
@@ -351,7 +351,15 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       status: "active",
       notes: intake.notes,
       handoff: defaultHandoff,
-    });
+    };
+
+    let { error: insertError } = await supabase.from("deals").insert(dealRow);
+
+    if (insertError && /notes/.test(insertError.message || "")) {
+      delete dealRow.notes;
+      const retry = await supabase.from("deals").insert(dealRow);
+      insertError = retry.error;
+    }
 
     if (insertError) {
       console.error("[webhook] insert failed", insertError.message, "rep_id=", rep.id);
