@@ -19,6 +19,8 @@ interface SupabaseDealRow {
   client_name: string;
   client_email: string | null;
   client_phone: string | null;
+  client_address?: string | null;
+  client_website?: string | null;
   ghl_contact_id: string | null;
   products: unknown;
   setup_fees: unknown;
@@ -63,6 +65,8 @@ export function mapDealRow(row: SupabaseDealRow): Deal {
     clientName: row.client_name,
     clientEmail: row.client_email ?? null,
     clientPhone: row.client_phone ?? null,
+    clientAddress: row.client_address ?? null,
+    clientWebsite: row.client_website ?? null,
     ghlContactId: row.ghl_contact_id ?? null,
     products: products.map((p: { productId?: string; quantity?: number; overrideMrr?: number | null }) => ({
       productId: p.productId ?? "",
@@ -91,6 +95,8 @@ export function dealToSupabase(deal: Partial<Deal>, tenantId: string) {
     client_name: deal.clientName,
     client_email: deal.clientEmail ?? null,
     client_phone: deal.clientPhone ?? null,
+    client_address: deal.clientAddress ?? null,
+    client_website: deal.clientWebsite ?? null,
     ghl_contact_id: deal.ghlContactId ?? null,
     products: deal.products ?? [],
     setup_fees: deal.setupFees ?? [],

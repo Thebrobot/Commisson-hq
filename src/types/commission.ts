@@ -91,6 +91,10 @@ export interface Deal {
   clientEmail?: string | null;
   /** From webhook: contact phone when client is added to active in GHL */
   clientPhone?: string | null;
+  /** Street address from business lookup */
+  clientAddress?: string | null;
+  /** Website from business lookup */
+  clientWebsite?: string | null;
   ghlContactId: string | null;
   products: DealProductLineItem[];
   setupFees: DealSetupFeeLineItem[];

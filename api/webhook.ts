@@ -1,18 +1,19 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
 import { createClient } from "@supabase/supabase-js";
+import { parseHandoffIntake } from "../src/lib/commission/handoffIntake";
+import { defaultHandoff } from "../src/lib/handoff";
+import { applyCors } from "./_cors";
 
 /**
- * Webhook endpoint for GoHighLevel.
- * Configure in GHL: when a rep tags a contact, send a POST to this URL.
+ * Webhook for GoHighLevel and the Brobot Handoff Hub form.
  *
- * Attribution: the payload must include the selling rep’s (or sales partner’s) email.
- * We look up `reps.email` (case-insensitive), then insert the deal with `rep_id` = that row’s UUID.
- * The email is only used for lookup; the deal is always stored with the database `rep_id`.
+ * Attribution: payload must include the selling rep’s email (`assigned_rep_email`,
+ * `rep_email`, or nested `rep.email`). We look up `reps.email` and insert the deal
+ * with that `rep_id`.
  *
- * Dry run (no DB writes): add `?dry_run=1` or `?dry_run=true` to the URL, or send `"dry_run": true`
- * in the JSON body. Response includes the matched rep and whether a deal would be inserted.
+ * Dry run: `?dry_run=1` or `"dry_run": true`.
  *
- * Required env vars (Vercel): SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY
+ * Required env: SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY
  */
 
 function readDryRunFlag(req: VercelRequest, body: Record<string, unknown>): boolean {
@@ -24,6 +25,12 @@ function readDryRunFlag(req: VercelRequest, body: Record<string, unknown>): bool
 }
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
+  applyCors(req, res);
+
+  if (req.method === "OPTIONS") {
+    return res.status(204).end();
+  }
+
   if (req.method !== "POST") {
     return res.status(405).json({ error: "Method not allowed" });
   }
@@ -33,7 +40,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (!url || !serviceRoleKey) {
     return res.status(500).json({
       error: "Server misconfigured",
-      details: "Missing SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY. Add them in Vercel → Settings → Environment Variables for Production AND Preview.",
+      details:
+        "Missing SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY. Add them in Vercel → Settings → Environment Variables for Production AND Preview.",
     });
   }
 
@@ -47,39 +55,23 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const bodyObj = body as Record<string, unknown>;
     const dryRun = readDryRunFlag(req, bodyObj);
 
-    const payload = body as {
-      contact_id?: string;
-      company_name?: string;
-      contact_email?: string;
-      contact_phone?: string;
-      /** Primary: rep / partner email for attribution (must match a row in `reps`). */
-      assigned_rep_email?: string;
-      /** Alias if your GHL JSON uses a different key for the same value. */
-      rep_email?: string;
-      dry_run?: boolean;
-    };
-
-    const repEmailRaw = payload.assigned_rep_email ?? payload.rep_email;
-    if (!payload.contact_id || !payload.company_name || !repEmailRaw?.trim()) {
+    let intake;
+    try {
+      intake = parseHandoffIntake(bodyObj);
+    } catch {
       return res.status(400).json({
         error: "Missing required fields: contact_id, company_name, and rep email",
-        hint: "Send `assigned_rep_email` or `rep_email` (must match `reps.email` for that person).",
+        hint: "Send `assigned_rep_email` or `rep_email`, or nested `rep.email` from the Handoff Hub form.",
         dry_run: dryRun,
       });
     }
-
-    const clientName = payload.company_name.trim();
-    const ghlContactId = payload.contact_id.trim();
-    const contactEmail = payload.contact_email?.trim() || null;
-    const contactPhone = payload.contact_phone?.trim() || null;
-    const assignedRepEmail = repEmailRaw.trim().toLowerCase();
 
     const supabase = createClient(url, serviceRoleKey, { auth: { persistSession: false } });
 
     const { data: repRows, error: repError } = await supabase
       .from("reps")
       .select("id, tenant_id, name, email, role")
-      .ilike("email", assignedRepEmail);
+      .ilike("email", intake.assignedRepEmail);
 
     if (repError) {
       console.error("[webhook] rep lookup failed", repError.message);
@@ -94,25 +86,25 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     if (repList.length === 0) {
       if (dryRun) {
         console.warn(
-          `[webhook] dry_run rep not found normalized_email=${assignedRepEmail} ghl_contact_id=${ghlContactId}`,
+          `[webhook] dry_run rep not found normalized_email=${intake.assignedRepEmail} ghl_contact_id=${intake.ghlContactId}`,
         );
       }
       return res.status(400).json({
         error: "Rep not found",
-        message: `No rep found with email: ${assignedRepEmail}. Add them to the reps table first.`,
+        message: `No rep found with email: ${intake.assignedRepEmail}. Add them to the reps table first.`,
         dry_run: dryRun,
-        normalized_rep_email: assignedRepEmail,
+        normalized_rep_email: intake.assignedRepEmail,
       });
     }
 
     if (repList.length > 1) {
       const message = `Multiple reps share this email (${repList.length} rows). Fix duplicates in the reps table.`;
-      console.error("[webhook] ambiguous rep email", assignedRepEmail, repList.map((r) => r.id));
+      console.error("[webhook] ambiguous rep email", intake.assignedRepEmail, repList.map((r) => r.id));
       return res.status(409).json({
         error: "Ambiguous rep email",
         message,
         dry_run: dryRun,
-        normalized_rep_email: assignedRepEmail,
+        normalized_rep_email: intake.assignedRepEmail,
         matching_rep_ids: repList.map((r) => r.id),
       });
     }
@@ -123,12 +115,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       .from("deals")
       .select("id")
       .eq("tenant_id", rep.tenant_id)
-      .eq("ghl_contact_id", ghlContactId)
+      .eq("ghl_contact_id", intake.ghlContactId)
       .maybeSingle();
 
     if (dryRun) {
       console.log(
-        `[webhook] dry_run ok rep_id=${rep.id} rep_name=${JSON.stringify(rep.name)} normalized_email=${assignedRepEmail} would_insert=${!existing} ghl_contact_id=${ghlContactId}`,
+        `[webhook] dry_run ok rep_id=${rep.id} rep_name=${JSON.stringify(rep.name)} normalized_email=${intake.assignedRepEmail} would_insert=${!existing} ghl_contact_id=${intake.ghlContactId}`,
       );
       return res.status(200).json({
         ok: true,
@@ -141,48 +133,52 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             email: rep.email,
             role: rep.role,
           },
-          normalized_rep_email: assignedRepEmail,
+          normalized_rep_email: intake.assignedRepEmail,
         },
         deal_preview: {
           would_insert: !existing,
           reason: existing ? "deal_already_exists_for_contact" : "would_create_new_deal",
           existing_deal_id: existing?.id ?? null,
+          products: intake.products,
+          setup_fees: intake.setupFees,
         },
         payload_echo: {
-          client_name: clientName,
-          ghl_contact_id: ghlContactId,
-          contact_email: contactEmail,
-          contact_phone: contactPhone,
+          client_name: intake.clientName,
+          ghl_contact_id: intake.ghlContactId,
+          contact_email: intake.contactEmail,
+          contact_phone: intake.contactPhone,
         },
       });
     }
 
     if (existing) {
       console.log(
-        `[webhook] duplicate contact rep_id=${rep.id} ghl_contact_id=${ghlContactId} existing_deal_id=${existing.id}`,
+        `[webhook] duplicate contact rep_id=${rep.id} ghl_contact_id=${intake.ghlContactId} existing_deal_id=${existing.id}`,
       );
       return res.status(200).json({
         ok: true,
         message: "Deal already exists",
-        clientName,
-        ghlContactId,
+        clientName: intake.clientName,
+        ghlContactId: intake.ghlContactId,
         rep_id: rep.id,
+        deal_id: existing.id,
       });
     }
 
-    const today = new Date().toISOString().slice(0, 10);
     const { error: insertError } = await supabase.from("deals").insert({
       tenant_id: rep.tenant_id,
       rep_id: rep.id,
-      client_name: clientName,
-      client_email: contactEmail,
-      client_phone: contactPhone,
-      ghl_contact_id: ghlContactId,
-      products: [],
-      setup_fees: [],
-      close_date: today,
-      first_payment_date: null,
+      client_name: intake.clientName,
+      client_email: intake.contactEmail,
+      client_phone: intake.contactPhone,
+      ghl_contact_id: intake.ghlContactId,
+      products: intake.products,
+      setup_fees: intake.setupFees,
+      close_date: intake.closeDate,
+      first_payment_date: intake.firstPaymentDate,
       status: "active",
+      notes: intake.notes,
+      handoff: defaultHandoff,
     });
 
     if (insertError) {
@@ -193,13 +189,15 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       });
     }
 
-    console.log(`[webhook] deal created rep_id=${rep.id} ghl_contact_id=${ghlContactId} client=${JSON.stringify(clientName)}`);
+    console.log(
+      `[webhook] deal created source=${intake.source} rep_id=${rep.id} ghl_contact_id=${intake.ghlContactId} client=${JSON.stringify(intake.clientName)}`,
+    );
 
     return res.status(200).json({
       ok: true,
       message: "Webhook received",
-      clientName,
-      ghlContactId,
+      clientName: intake.clientName,
+      ghlContactId: intake.ghlContactId,
       rep_id: rep.id,
     });
   } catch (err) {

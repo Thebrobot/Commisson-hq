@@ -312,6 +312,8 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
     if (updates.clientName != null) row.client_name = updates.clientName;
     if (updates.clientEmail !== undefined) row.client_email = updates.clientEmail;
     if (updates.clientPhone !== undefined) row.client_phone = updates.clientPhone;
+    if (updates.clientAddress !== undefined) row.client_address = updates.clientAddress;
+    if (updates.clientWebsite !== undefined) row.client_website = updates.clientWebsite;
     if (updates.ghlContactId !== undefined) row.ghl_contact_id = updates.ghlContactId;
     if (updates.products != null) row.products = updates.products;
     if (updates.setupFees != null) row.setup_fees = updates.setupFees;
@@ -326,8 +328,19 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
     const { error: updateError } = await supabase.from("deals").update(row).eq("id", dealId);
 
     if (updateError) {
-      console.error("[updateDeal]", updateError);
-      return;
+      const missingBizCols = /client_address|client_website/.test(updateError.message || "");
+      if (missingBizCols) {
+        delete row.client_address;
+        delete row.client_website;
+        const retry = await supabase.from("deals").update(row).eq("id", dealId);
+        if (retry.error) {
+          console.error("[updateDeal]", retry.error);
+          return;
+        }
+      } else {
+        console.error("[updateDeal]", updateError);
+        return;
+      }
     }
 
     setDeals((prev) =>

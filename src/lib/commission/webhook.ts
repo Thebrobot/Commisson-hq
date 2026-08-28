@@ -1,15 +1,13 @@
 import type { NormalizedWebhookDealDraft, GhlWebhookPayload } from "@/types/webhook";
+import { parseHandoffIntake } from "@/lib/commission/handoffIntake";
 
 export function normalizeWebhookPayload(payload: GhlWebhookPayload): NormalizedWebhookDealDraft {
-  const repEmailRaw = payload.assigned_rep_email ?? payload.rep_email;
-  if (!repEmailRaw?.trim()) {
-    throw new Error("assigned_rep_email or rep_email is required");
-  }
+  const parsed = parseHandoffIntake(payload as unknown as Record<string, unknown>);
   return {
-    clientName: payload.company_name.trim(),
-    ghlContactId: payload.contact_id.trim(),
-    contactEmail: payload.contact_email?.trim() || null,
-    contactPhone: payload.contact_phone?.trim() || null,
-    assignedRepEmail: repEmailRaw.trim().toLowerCase(),
+    clientName: parsed.clientName,
+    ghlContactId: parsed.ghlContactId,
+    contactEmail: parsed.contactEmail,
+    contactPhone: parsed.contactPhone,
+    assignedRepEmail: parsed.assignedRepEmail,
   };
 }

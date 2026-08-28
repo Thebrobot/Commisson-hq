@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
-import { Ban, ClipboardCheck, CreditCard, ExternalLink, Mail, Phone, Plus, Trash2, User } from "lucide-react";
+import { Ban, ClipboardCheck, CreditCard, ExternalLink, Globe, Mail, MapPin, Phone, Plus, Trash2, User } from "lucide-react";
 import {
   calcDealCommission,
   currency,
@@ -41,6 +41,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useDashboard } from "@/providers/DashboardProvider";
+import { BusinessNameLookup } from "@/components/dashboard/BusinessNameLookup";
 
 interface ClientEditSheetProps {
   item: DealFeedItem | null;
@@ -67,6 +68,8 @@ const ClientEditSheet = ({
   const [clientName, setClientName] = useState("");
   const [clientEmail, setClientEmail] = useState("");
   const [clientPhone, setClientPhone] = useState("");
+  const [clientAddress, setClientAddress] = useState("");
+  const [clientWebsite, setClientWebsite] = useState("");
   const [ghlContactId, setGhlContactId] = useState("");
   const [repId, setRepId] = useState("");
   const [closeDate, setCloseDate] = useState("");
@@ -81,6 +84,8 @@ const ClientEditSheet = ({
       setClientName(item.deal.clientName);
       setClientEmail(item.deal.clientEmail ?? "");
       setClientPhone(item.deal.clientPhone ?? "");
+      setClientAddress(item.deal.clientAddress ?? "");
+      setClientWebsite(item.deal.clientWebsite ?? "");
       setGhlContactId(item.deal.ghlContactId ?? "");
       setRepId(item.deal.repId);
       setCloseDate(item.deal.closeDate);
@@ -232,6 +237,8 @@ const ClientEditSheet = ({
       clientName: clientName.trim() || deal.clientName,
       clientEmail: clientEmail.trim() || null,
       clientPhone: clientPhone.trim() || null,
+      clientAddress: clientAddress.trim() || null,
+      clientWebsite: clientWebsite.trim() || null,
       ghlContactId: ghlContactId.trim() || null,
       repId: repId || deal.repId,
       closeDate: closeDate || deal.closeDate,
@@ -298,13 +305,46 @@ const ClientEditSheet = ({
               <div className="space-y-2">
                 <Label htmlFor="client-name" className="flex items-center gap-2">
                   <User className="h-4 w-4" />
-                  Name
+                  Legal business name
                 </Label>
-                <Input
+                <BusinessNameLookup
                   id="client-name"
                   value={clientName}
-                  onChange={(e) => setClientName(e.target.value)}
-                  placeholder="Client name"
+                  onChange={setClientName}
+                  onSelect={(hit) => {
+                    setClientName(hit.name);
+                    if (hit.address) setClientAddress(hit.address);
+                    if (hit.phone) setClientPhone(hit.phone);
+                    if (hit.website) setClientWebsite(hit.website);
+                  }}
+                  placeholder="Start typing to search businesses"
+                />
+                <p className="text-xs text-muted-foreground">
+                  Pick a match to fill address, phone, and website.
+                </p>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="client-address" className="flex items-center gap-2">
+                  <MapPin className="h-4 w-4" />
+                  Address
+                </Label>
+                <Input
+                  id="client-address"
+                  value={clientAddress}
+                  onChange={(e) => setClientAddress(e.target.value)}
+                  placeholder="Street, city, state ZIP"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="client-website" className="flex items-center gap-2">
+                  <Globe className="h-4 w-4" />
+                  Website
+                </Label>
+                <Input
+                  id="client-website"
+                  value={clientWebsite}
+                  onChange={(e) => setClientWebsite(e.target.value)}
+                  placeholder="https://"
                 />
               </div>
               <div className="space-y-2">

@@ -1,5 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { calcDealCommission, getPayoutDate, getTierForMrr } from "@/lib/commission";
+import { mapHandoffFormLines, parseHandoffIntake } from "@/lib/commission/handoffIntake";
+import { industryFromGoogleTypes } from "@/lib/businessLookup";
 import { normalizeWebhookPayload } from "@/lib/commission/webhook";
 import type { Deal } from "@/types/commission";
 
@@ -243,5 +245,51 @@ describe("commission domain logic", () => {
       contactPhone: null,
       assignedRepEmail: "partner@example.com",
     });
+  });
+});
+
+describe("handoff hub intake mapping", () => {
+  it("maps form product ids and line MRC into CommissionHQ deal lines", () => {
+    const mapped = mapHandoffFormLines([
+      { productId: "brobot-one-core", lineQty: "1", monthlyAmount: "335", setupFee: "" },
+      { productId: "ai-receptionist-priority", lineQty: "2", monthlyAmount: "878", setupFee: "1560" },
+    ]);
+    expect(mapped.products).toEqual([
+      { productId: "brobot-one-core", quantity: 1, overrideMrr: 335 },
+      { productId: "ai-receptionist", quantity: 2, overrideMrr: 439 },
+    ]);
+    expect(mapped.setupFees).toEqual([
+      { type: "agent_broski_receptionist_setup", actualAmount: 1560 },
+    ]);
+  });
+
+  it("parses the nested Handoff Hub form payload", () => {
+    const parsed = parseHandoffIntake({
+      source: "deal-submission-form",
+      contact: { email: "ops@acme.com", phone: "555-0100" },
+      business: { legalName: "Acme Corp" },
+      rep: { email: "kyle@brobot.io", name: "Kyle" },
+      products: [{ productId: "brobot-one-basic", lineQty: "7", monthlyAmount: "246", setupFee: "0" }],
+      billing: { saleDate: "2026-08-28", estimatedChargeDate: "2026-09-07" },
+      notes: "Port in",
+    });
+    expect(parsed.clientName).toBe("Acme Corp");
+    expect(parsed.assignedRepEmail).toBe("kyle@brobot.io");
+    expect(parsed.ghlContactId).toBe("handoff:ops@acme.com");
+    expect(parsed.closeDate).toBe("2026-08-28");
+    expect(parsed.products[0]).toEqual({
+      productId: "brobot-one-basic",
+      quantity: 7,
+      overrideMrr: 246 / 7,
+    });
+  });
+});
+
+describe("business lookup helpers", () => {
+  it("maps Google place types to handoff industries", () => {
+    expect(industryFromGoogleTypes(["dentist", "health"])).toBe("Healthcare");
+    expect(industryFromGoogleTypes(["lawyer"])).toBe("Legal / Law Firm");
+    expect(industryFromGoogleTypes(["xyz"])).toBe("Professional Services");
+    expect(industryFromGoogleTypes(undefined)).toBeNull();
   });
 });
